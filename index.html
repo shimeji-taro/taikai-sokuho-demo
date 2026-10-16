@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大会集計テンプレート</title>
+<style>
+:root{--line:#333;--muted:#666;--bg:#eef1f5;--card:#fff;--accent:#1f5f8b;--win:#c62828;--next:#fff6c2;--warn:#fff3e0;--warnline:#ef6c00;--danger:#c62828;--hold:#ffe0b2}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:#111;font-family:"BIZ UDPGothic","Yu Gothic","Meiryo",sans-serif;font-size:14px}
+.app{max-width:1280px;margin:0 auto;padding:10px}
+.header{background:var(--card);border:1px solid #cfd6de;border-radius:10px;padding:10px 14px;margin-bottom:10px;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px #0001}
+.header h1{margin:0;font-size:20px}
+.sub{color:var(--muted);font-size:12px;margin-top:2px}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+button,.btn{font:inherit;font-size:13px;font-weight:700;padding:6px 10px;border:1px solid #9aa4ae;border-radius:6px;background:#fff;cursor:pointer;color:#111;text-decoration:none}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.danger{border-color:var(--danger);color:var(--danger)}
+button:disabled{opacity:.45;cursor:default}
+.status{font-size:12px;padding:3px 8px;border-radius:12px;background:#e8f5e9;color:#1b5e20;font-weight:700}
+.status.err{background:#ffebee;color:var(--danger)}
+.progress{font-size:12px;color:var(--muted)}
+.warnbar{margin-top:8px;padding:6px 10px;border:2px solid var(--danger);border-radius:6px;background:#ffebee;color:var(--danger);font-weight:700}
+.errbox{padding:10px;border:2px solid var(--danger);background:#ffebee;color:var(--danger);border-radius:8px;margin:8px 0;white-space:pre-wrap}
+.hidden{display:none!important}
+section.sheet{background:var(--card);border:1px solid #cfd6de;border-radius:10px;padding:10px 14px;margin-bottom:12px}
+.sheet-title{font-size:18px;font-weight:900;margin:2px 0 6px}
+.hint{font-size:12px;color:var(--muted);margin:0 0 8px}
+table{border-collapse:collapse}
+.sched{width:100%;font-size:13px}
+.sched th,.sched td{border:1px solid var(--line);padding:3px 5px;text-align:center}
+.sched th{background:#e3e8ee}
+.sched td.team{min-width:120px;font-weight:700}
+.sched td.team.win{color:var(--win)}
+.sched tr.ev td{background:#eceff1;font-weight:900}
+.sched tr.next td{background:var(--next)}
+.sched td.time{font-weight:900;white-space:nowrap;cursor:pointer}
+.sched td.time .orig{display:block;font-size:10px;color:var(--muted);font-weight:400}
+.sched td.time.changed{color:var(--win)}
+.sched td.res{font-size:12px;color:var(--muted);min-width:70px}
+input.sc{width:42px;height:30px;font-size:18px;font-weight:900;text-align:center;border:2px solid #777;border-radius:6px}
+input.sc:focus{outline:3px solid #1f8bff55;border-color:var(--accent)}
+input.sc.draft{background:#fff9c4;border-color:#f9a825}
+.pair-note{font-size:10px;color:#a66a00;font-weight:700}
+.league-wrap{overflow-x:auto;margin-bottom:12px}
+.group-title{font-size:15px;font-weight:900;margin:10px 0 4px}
+.league th,.league td{border:1px solid var(--line);padding:2px 4px;text-align:center;font-size:12px}
+.league th{background:#e3e8ee}
+.league td.diag{background:repeating-linear-gradient(135deg,#ddd 0 2px,#f5f5f5 2px 8px)}
+.league td.name{text-align:left;font-weight:800;white-space:nowrap}
+.league .mk{display:block;font-weight:900;font-size:14px}
+.league .mk.w{color:var(--win)}
+.league .sc2{display:block;font-size:11px}
+.league td.rank{font-weight:900;font-size:14px}
+.league td.rank.prov{color:var(--muted);font-weight:700}
+.tiebox{border:2px solid var(--warnline);background:var(--warn);border-radius:6px;padding:6px 8px;margin:6px 0;font-size:13px}
+.tiebox select{font:inherit;margin:0 6px 0 2px}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#263238;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99}
+.toast.show{opacity:.95}
+.sched tr.tour td{background:#f7f3fb}
+.sched tr.tour.next td{background:var(--next)}
+.sched td.tlabel{font-size:11px;color:#6a1b9a;font-weight:800;white-space:nowrap}
+.sched td.team .src{display:block;font-size:10px;color:var(--muted);font-weight:400}
+.sched td.team.tbd{color:var(--muted);font-weight:400}
+.hold{display:block;font-size:11px;color:var(--warnline);font-weight:800}
+.vrow{margin-top:3px;display:flex;gap:3px;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#6a1b9a}
+input.vsc{width:34px;height:24px;font-size:14px;font-weight:900;text-align:center;border:1.5px solid #9c6ac4;border-radius:4px}
+.vrow select{font-size:12px;max-width:140px}
+.panel{border:1px solid #cfd6de;border-radius:8px;padding:8px 10px;margin:8px 0;background:#fafbfc}
+.panel h3{margin:0 0 6px;font-size:14px}
+.seedtable td,.seedtable th{border:1px solid #aaa;padding:2px 6px;font-size:12px;text-align:center}
+.seedtable td.l{text-align:left}
+.draw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 10px}
+.draw-grid label{font-size:12px;display:flex;gap:4px;align-items:center}
+.draw-grid select{flex:1;font-size:12px}
+.bracket-scroll{overflow-x:auto;padding:4px 0}
+.bracket{position:relative}
+.bracket svg{position:absolute;left:0;top:0;pointer-events:none}
+.entry{position:absolute;width:150px;height:28px;border:1px solid var(--line);background:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;gap:4px;padding:0 5px;overflow:hidden;white-space:nowrap}
+.entry .seed{font-size:10px;color:var(--muted);font-weight:400}
+.entry.tbd{color:var(--muted);font-weight:400}
+.bcard{position:absolute;width:200px;border:1.5px solid var(--line);background:#fff;font-size:12px}
+.bcard .meta{font-size:10px;color:#555;background:#eef1f5;padding:1px 4px;white-space:nowrap;overflow:hidden}
+.bcard .tl{display:flex;justify-content:space-between;align-items:center;height:22px;padding:0 5px;border-top:1px solid #ccc;white-space:nowrap;overflow:hidden}
+.bcard .tl.win{color:var(--win);font-weight:900}
+.bcard .tl .s{font-weight:900;min-width:44px;text-align:right}
+.bcard.stale{border-color:var(--warnline);background:var(--hold)}
+.awards td,.awards th{border:1px solid var(--line);padding:4px 10px;font-size:14px}
+.awards th{background:#e3e8ee}
+.footer{background:var(--card);border:1px solid #cfd6de;border-radius:10px;padding:10px 14px}
+.pubbox{border:1px solid #9fb6c8;background:#f3f8fc;border-radius:8px;padding:8px 10px;margin:8px 0}
+.pubbox input[type=email],.pubbox input[type=password]{font:inherit;padding:5px;width:220px}
+.pubbox textarea{font:inherit;width:100%;min-height:52px;padding:5px}
+.status.pub{background:#e3f2fd;color:#0d47a1}
+.notice{border:2px solid var(--accent);background:#e8f1f8;border-radius:8px;padding:8px 12px;margin:8px 0;white-space:pre-wrap;font-weight:700}
+.notice.warn{border-color:var(--danger);background:#ffebee;color:var(--danger)}
+.notice .at{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+.ro{display:inline-block;min-width:26px;font-size:18px;font-weight:900}
+.vtabs{display:flex;gap:6px;margin-top:8px}
+.vtab{flex:1;padding:8px 4px;font-size:14px}
+.vtab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.vupd{font-size:12px;color:var(--muted);margin-top:4px}
+.vupd .err{color:var(--danger);font-weight:700}
+body.view .sched td.time{cursor:default}
+body.view .toolbar,body.view .footer,body.view .hint{display:none!important}
+body.view .header{position:static}
+body.view section.sheet.off{display:none}
+@media (max-width:820px){body.view .app{padding:4px}body.view section.sheet{padding:6px}}
+.footer .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+@media print{
+  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .header{position:static;box-shadow:none;border:0}
+  .toolbar,.footer,.hint,.warnbar{display:none!important}
+  section.sheet{border:0;padding:0}
+  #leagueSheet,#tournamentSheet{break-before:page}
+  input.sc{border:0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <h1 id="title"></h1>
+    <div class="sub" id="subtitle"></div>
+    <div id="warnBar" class="warnbar hidden"></div>
+    <div id="viewBar" class="hidden"><div class="vupd" id="vupd"></div><div id="noticeView"></div>
+      <div class="vtabs"><button class="vtab" data-vtab="scheduleSheet">進行表</button><button class="vtab" data-vtab="leagueSheet">リーグ表</button><button class="vtab" data-vtab="tournamentSheet">トーナメント</button></div></div>
+    <div class="toolbar">
+      <span id="saveStatus" class="status">自動保存：準備中</span>
+      <span id="progress" class="progress"></span>
+      <button id="nextBtn" class="primary">次の試合へ</button>
+      <button id="undoBtn">直前の変更を戻す</button>
+      <button id="exportBtn">バックアップ保存</button>
+      <span id="lastExport" class="progress"></span>
+      <span id="pubStatus" class="status pub hidden"></span>
+      <button onclick="window.print()">印刷</button>
+    </div>
+  </header>
+  <div id="configErrors"></div>
+  <section class="sheet" id="scheduleSheet">
+    <div class="sheet-title">進行表・試合結果入力</div>
+    <p class="hint">左の人数 → Enter → 右の人数 → Enter で確定し、次の試合へ移ります。入力済みの試合を直すときは、両方の数字を直してから Enter（Escで取り消し）。時刻をクリックすると、実際の進行に合わせて直せます。</p>
+    <div id="scheduleRoot"></div>
+  </section>
+  <section class="sheet" id="leagueSheet">
+    <div class="sheet-title">予選リーグ表（自動計算）</div>
+    <p class="hint">対戦欄は上段が○△×、下段が「自チーム－相手チーム」の内野人数です。ここでは入力できません。</p>
+    <div id="leagueRoot"></div>
+  </section>
+  <section class="sheet" id="tournamentSheet">
+    <div class="sheet-title">決勝トーナメント</div>
+    <div id="tournamentRoot"><p class="hint">（第2段階で実装予定）</p></div>
+  </section>
+  <footer class="footer">
+    <details>
+      <summary>データ保全・復元</summary>
+      <p class="hint">入力のたびにブラウザ内へ自動保存し、別系統の端末内バックアップと変更履歴も残します。休憩ごとに「バックアップ保存」でファイルも残してください。このアプリを複数のタブで同時に開かないでください。</p>
+      <div class="row">
+        <button id="exportBtn2">バックアップファイルを書き出す</button>
+        <label class="btn">バックアップを読み込む<input id="importFile" type="file" accept=".json,application/json" class="hidden"></label>
+      </div>
+      <div class="pubbox" id="pubBox"></div>
+      <div class="row">
+        <input id="deletePhrase" placeholder="全削除 と入力" style="font:inherit;padding:5px">
+        <button id="deleteAll" class="danger">全データを削除</button>
+      </div>
+    </details>
+  </footer>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+"use strict";
+// =====================================================================
+//  大会集計テンプレート
+//  ★ 大会ごとに書き換えるのは、下の「CONFIG（大会の設定）」だけです。
+//     それより下の「仕組み」の部分は、書き換えなくても動くように作っています。
+// =====================================================================
+
+const VERSION = "v0.4.2";
+
+// ---------------------------------------------------------------------
+//  CONFIG（大会の設定）ここから
+// ---------------------------------------------------------------------
+const CONFIG = {
+  id: "pub_demo", title: "第1回 ひまわりカップ（デモ）", date: "20XX年○月○日（日）", venue: "○○体育館",
+  courts: ["A","B"],
+  rules: { maxScore: 20, points: { win: 2, draw: 1, lose: 0 }, rankBy: "own" },
+  groups: [
+    { name: "A", teams: [["ひまわりキッズ", "ひまわり"], ["あおぞらファイターズ", "あおぞら"], ["みどりドッジ", "みどり"], ["しおかぜスターズ", "しおかぜ"], ["つばさレッド", "つばさ"], ["ほしぞらサンダース", "ほしぞら"], ["こもれびイーグルス", "こもれび"], ["やまびこブレイブス", "やまびこ"]] }
+  ],
+  legs: 1,
+  schedule: { events: [{ time: "8:30", label: "開場" }, { time: "9:00", label: "開会式" }], leagueStart: "9:30", leagueInterval: 510, breaks: [{ after: 7, minutes: 10, label: "休憩" }], lunchMinutes: 40, tournamentInterval: 600, closing: "閉会式" },
+  tournament: { advance: { type: "all" }, seeding: "auto", thirdPlace: true },
+  scheduleSeed: 1,
+  publish: { enabled: true, databaseURL: "https://taikai-demo-default-rtdb.asia-southeast1.firebasedatabase.app", apiKey: "AIzaSyAskK4hGmjiyFV_UJJwgHhkMWVKjGZI3dw", refreshSeconds: 10 },
+};
+// ---------------------------------------------------------------------
+//  CONFIG ここまで（ここから下は「仕組み」）
+// ---------------------------------------------------------------------
+
+
+// ============================ 見るだけモード（速報ページ）の判定 ============================
+// 公開したページ（http/https の localhost 以外）や、URLに ?view を付けたときは「見るだけ」になる。?admin を付けると運営画面
+const PARAMS = new URLSearchParams(location.search);
+const PUB = CONFIG.publish || {};
+const DB_URL = (PARAMS.get("db") || PUB.databaseURL || "").replace(/\/+$/, "");
+const VIEW = PARAMS.has("view") || (/^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && !PARAMS.has("admin"));
+
+// ============================ 共通の小道具 ============================
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const toHalf = s => String(s ?? "").replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+const isScore = v => Number.isInteger(v) && v >= 0 && v <= CONFIG.rules.maxScore;
+const parseHM = s => { const m = /^(\d{1,2})[:：](\d{2})$/.exec(toHalf(String(s).trim())); if (!m) return null; const h = +m[1], mi = +m[2]; return h < 24 && mi < 60 ? (h * 3600 + mi * 60) : null; };
+const fmtHM = sec => { const t = Math.floor(sec / 60); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2600); }
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// ============================ 設定の読み取り ============================
+// チームは通し番号（0,1,2,…）で扱う。TEAMS[i] = { name, short, g（グループ番号） }
+const TEAMS = [];
+CONFIG.groups.forEach((gr, g) => gr.teams.forEach(([name, short]) => TEAMS.push({ name, short: short || name, g })));
+const GROUP_TEAMS = CONFIG.groups.map((_, g) => TEAMS.map((t, i) => t.g === g ? i : -1).filter(i => i >= 0));
+const groupName = g => CONFIG.groups[g].name;
+const teamName = i => i == null ? "" : TEAMS[i].name;
+const teamShort = i => i == null ? "" : TEAMS[i].short;
+
+function validateConfig() {
+  const errs = [];
+  if (!/^[A-Za-z0-9_]+$/.test(CONFIG.id)) errs.push("id は英数字とアンダーバーだけで書いてください。");
+  if (!CONFIG.courts.length) errs.push("courts（コート）が1つもありません。");
+  CONFIG.groups.forEach(gr => { if (gr.teams.length < 2) errs.push(`グループ${gr.name}のチームが2未満です。`); });
+  if (parseHM(CONFIG.schedule.leagueStart) == null) errs.push("leagueStart の時刻の書き方が正しくありません（例 9:30）。");
+  for (const e of CONFIG.schedule.events) if (parseHM(e.time) == null) errs.push(`行事「${e.label}」の時刻の書き方が正しくありません。`);
+  if (!["own", "diff"].includes(CONFIG.rules.rankBy || "own")) errs.push('rules.rankBy は "own" か "diff" にしてください。');
+  if (CONFIG.tournament.advance.type === "top" && !(CONFIG.tournament.advance.perGroup >= 1)) errs.push("tournament.advance.perGroup（各グループ上位○チーム）を1以上にしてください。");
+  if (!["auto", "draw"].includes(CONFIG.tournament.seeding)) errs.push('tournament.seeding は "auto" か "draw" にしてください。');
+  if (PUB.enabled && (!DB_URL || !PUB.apiKey)) errs.push("速報ページを使う場合は、publish の databaseURL と apiKey を書いてください。");
+  const names = TEAMS.map(t => t.name); if (new Set(names).size !== names.length) errs.push("同じ正式名のチームがあります。");
+  return errs;
+}
+// 設定の「指紋」。設定が変わったら、保存データと食い違わないように知らせる
+function configSignature() {
+  const s = JSON.stringify({ g: CONFIG.groups, l: CONFIG.legs, c: CONFIG.courts.length, seed: CONFIG.scheduleSeed });
+  let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+}
+
+// ============================ 予選の対戦表を作る ============================
+// グループごとに総当たり（サークル方式）。legs=2 なら左右を入れ替えてもう1周。
+function buildLeagueMatches() {
+  const list = [];
+  GROUP_TEAMS.forEach((ids, g) => {
+    const arr = ids.slice(); if (arr.length % 2) arr.push(null);
+    const n = arr.length;
+    for (let leg = 1; leg <= CONFIG.legs; leg++) {
+      const rot = arr.slice();
+      for (let r = 0; r < n - 1; r++) {
+        for (let k = 0; k < n / 2; k++) {
+          let a = rot[k], b = rot[n - 1 - k];
+          if (a == null || b == null) continue;
+          if ((r + k) % 2) [a, b] = [b, a];
+          if (leg % 2 === 0) [a, b] = [b, a];
+          list.push({ id: `L${g}-${Math.min(a, b)}-${Math.max(a, b)}-${leg}`, g, a, b, leg, gr: (leg - 1) * (n - 1) + r });
+        }
+        rot.splice(1, 0, rot.pop());
+      }
+    }
+  });
+  return list;
+}
+
+// 全コート同時に試合をする「回」に割り振る。
+// できるだけ同じチームが続けて試合をしないように並べ、無理なときも3回続けてにはしない。
+// 並べ方は scheduleSeed から決まるので、開き直しても同じになる。
+function scheduleLeague(matches) {
+  const C = CONFIG.courts.length;
+  const rand = mulberry32(CONFIG.scheduleSeed * 7919 + matches.length);
+  let best = null;
+  const TRIALS = 300;
+  for (let t = 0; t < TRIALS; t++) {
+    const rem = matches.map(m => ({ m, r: rand() }));
+    const last = {}, streak = {};
+    const rounds = [];
+    let b2b = 0, triple = 0, maxRun = 0;
+    while (rem.length) {
+      const k = rounds.length;
+      const restOf = id => last[id] == null ? 99 : k - 1 - last[id];
+      rem.sort((x, y) => (x.m.gr - y.m.gr) || (Math.min(restOf(y.m.a), restOf(y.m.b)) - Math.min(restOf(x.m.a), restOf(x.m.b))) || (x.r - y.r));
+      const busy = new Set(), pick = [];
+      const can = (m, strict) => !busy.has(m.a) && !busy.has(m.b) &&
+        (!strict || ((restOf(m.a) > 0 || streak[m.a] < 2) && (restOf(m.b) > 0 || streak[m.b] < 2)));
+      // 1) 前の回に出ていないチーム同士 → 2) 続けて2回まで → 3) やむを得ない場合（連続が短いチームを優先）
+      const runIf = id => restOf(id) === 0 ? (streak[id] || 1) + 1 : 1;   // この回に出たら何回連続になるか
+      for (const pass of [0, 1, 2]) {
+        const cand = pass < 2 ? rem : rem.slice().sort((x, y) => (Math.max(runIf(x.m.a), runIf(x.m.b)) - Math.max(runIf(y.m.a), runIf(y.m.b))) || (runIf(x.m.a) + runIf(x.m.b) - runIf(y.m.a) - runIf(y.m.b)) || (x.r - y.r));
+        for (let i = 0; i < cand.length && pick.length < C; i++) {
+          const m = cand[i].m;
+          if (pick.includes(cand[i])) continue;
+          const ok = pass === 0 ? (can(m, true) && restOf(m.a) > 0 && restOf(m.b) > 0) : pass === 1 ? can(m, true) : can(m, false);
+          if (ok) { pick.push(cand[i]); busy.add(m.a); busy.add(m.b); }
+        }
+        if (pick.length >= C) break;
+      }
+      for (const p of pick) {
+        rem.splice(rem.indexOf(p), 1);
+        for (const id of [p.m.a, p.m.b]) {
+          const cont = last[id] === k - 1;
+          streak[id] = cont ? (streak[id] || 1) + 1 : 1;
+          if (cont) b2b++;
+          if (streak[id] >= 3) triple++;
+          if (streak[id] > maxRun) maxRun = streak[id];
+          last[id] = k;
+        }
+      }
+      rounds.push(pick.map(p => p.m));
+    }
+    // 評価：最大連続回数 → 3回以上連続の延べ数 → 回の数 → 2回連続の延べ数 の順に少ないほど良い
+    const score = Math.max(0, maxRun - 2) * 1e9 + triple * 1e6 + rounds.length * 1e3 + b2b;
+    if (!best || score < best.score) best = { score, rounds, b2b, triple, maxRun };
+  }
+  // コートの割り当て：各回の中で、チームのコートが偏りにくいように並べる
+  const courtCount = {};
+  best.rounds.forEach(r => {
+    const used = new Set();
+    r.forEach(m => {
+      let bestC = -1, bestV = Infinity;
+      for (let c = 0; c < C; c++) { if (used.has(c)) continue; const v = (courtCount[m.a + "|" + c] || 0) + (courtCount[m.b + "|" + c] || 0); if (v < bestV) { bestV = v; bestC = c; } }
+      used.add(bestC); m.court = bestC;
+      courtCount[m.a + "|" + bestC] = (courtCount[m.a + "|" + bestC] || 0) + 1;
+      courtCount[m.b + "|" + bestC] = (courtCount[m.b + "|" + bestC] || 0) + 1;
+    });
+    r.sort((x, y) => x.court - y.court);
+  });
+  return best;
+}
+
+const LEAGUE_MATCHES = buildLeagueMatches();
+const LEAGUE_PLAN = scheduleLeague(LEAGUE_MATCHES.map(m => ({ ...m })));
+const LEAGUE_ROUNDS = LEAGUE_PLAN.rounds;                 // [[試合,…], …]
+let NO = 0;
+LEAGUE_ROUNDS.forEach((r, k) => r.forEach(m => { m.no = ++NO; m.round = k; }));
+const MATCH_BY_ID = {}; LEAGUE_ROUNDS.flat().forEach(m => MATCH_BY_ID[m.id] = m);
+
+// ============================ 決勝トーナメントの形 ============================
+// 進出チーム数 TQ、表の大きさ TP（2のべき乗）、回戦数 TR。
+// 枠 s（0〜TP-1）に入るのは「第 SEED_AT[s] シード」。シード番号が TQ を超える枠は不戦勝（空き枠）。
+const TCONF = CONFIG.tournament;
+const TQ = TCONF.advance.type === "all" ? TEAMS.length : GROUP_TEAMS.reduce((n, ids) => n + Math.min(TCONF.advance.perGroup, ids.length), 0);
+const TP = TQ >= 2 ? 2 ** Math.ceil(Math.log2(TQ)) : 0;
+const TR = TP ? Math.log2(TP) : 0;
+function seedOrder(P) { let o = [1]; while (o.length < P) { const n = o.length * 2; o = o.flatMap(x => [x, n + 1 - x]); } return o; }
+const SEED_AT = TP ? seedOrder(TP) : [];
+const IS_BYE = SEED_AT.map(s => s > TQ);
+const roundName = r => r === TR ? "決勝" : r === TR - 1 ? "準決勝" : r === TR - 2 ? "準々決勝" : `${r}回戦`;
+const TMATCH = {};   // 試合ID → { id, r, k, src:[A側,B側], walkover, label }
+for (let r = 1; r <= TR; r++) {
+  for (let k = 0; k < TP / 2 ** r; k++) {
+    const id = `T${r}-${k}`;
+    const src = r === 1 ? [{ slot: 2 * k }, { slot: 2 * k + 1 }] : [{ win: `T${r - 1}-${2 * k}` }, { win: `T${r - 1}-${2 * k + 1}` }];
+    TMATCH[id] = { id, r, k, src, walkover: r === 1 && (IS_BYE[2 * k] || IS_BYE[2 * k + 1]), label: roundName(r) };
+  }
+}
+const FINAL_ID = TR ? `T${TR}-0` : null;
+// 3位決定戦：準決勝の敗者同士。準決勝が不戦勝になる場合（3チームのとき）は行わない
+const HAS_THIRD = !!(TCONF.thirdPlace && TR >= 2 && !TMATCH[`T${TR - 1}-0`].walkover && !TMATCH[`T${TR - 1}-1`].walkover);
+if (HAS_THIRD) TMATCH.T3rd = { id: "T3rd", r: TR, k: 1, src: [{ lose: `T${TR - 1}-0` }, { lose: `T${TR - 1}-1` }], walkover: false, label: "3位決定戦" };
+// トーナメントの「回」：回戦ごとにコート数ずつ。決勝と3位決定戦は（コートが2面以上なら）同じ回に行う
+const TSLOTS = [];
+{
+  const C = CONFIG.courts.length;
+  for (let r = 1; r < TR; r++) {
+    const ids = Object.values(TMATCH).filter(m => m.r === r && m.id !== "T3rd" && !m.walkover).map(m => m.id);
+    for (let i = 0; i < ids.length; i += C) TSLOTS.push(ids.slice(i, i + C));
+  }
+  if (TR) { if (HAS_THIRD && C >= 2) TSLOTS.push([FINAL_ID, "T3rd"]); else { if (HAS_THIRD) TSLOTS.push(["T3rd"]); TSLOTS.push([FINAL_ID]); } }
+  TSLOTS.forEach((ids, n) => ids.forEach((id, c) => { TMATCH[id].slot = n; TMATCH[id].court = c; TMATCH[id].no = ++NO; }));
+}
+const PLAYABLE_T = TSLOTS.flat();
+
+// ============================ 時刻表（進行表の行） ============================
+// 行の種類：ev（行事）／ L（予選の回）／ brk（休憩）
+function buildTimeline() {
+  const S = CONFIG.schedule, rows = [];
+  for (const e of S.events) rows.push({ kind: "ev", key: "E" + e.label, base: parseHM(e.time), label: e.label, fixed: true });
+  let t = parseHM(S.leagueStart);
+  LEAGUE_ROUNDS.forEach((r, k) => {
+    rows.push({ kind: "L", key: "L" + k, base: t, round: k });
+    t += S.leagueInterval;
+    const b = S.breaks.find(x => x.after === k + 1);
+    if (b && k < LEAGUE_ROUNDS.length - 1) { rows.push({ kind: "brk", key: "B" + k, base: t, label: b.label || "休憩", minutes: b.minutes }); t += b.minutes * 60; }
+  });
+  if (S.lunchMinutes) { rows.push({ kind: "brk", key: "LUNCH", base: t, label: "昼休憩", minutes: S.lunchMinutes }); t += S.lunchMinutes * 60; }
+  TSLOTS.forEach((ids, n) => { rows.push({ kind: "T", key: "T" + n, base: t, slot: n }); t += S.tournamentInterval; });
+  rows.push({ kind: "ev", key: "CLOSE", base: t, label: S.closing || "閉会式" });
+  return rows;
+}
+const TIMELINE = buildTimeline();
+
+// 実際の時刻：時刻の手直し（state.shift＝以降をずらす量、state.fixed＝その行だけ）を反映
+function rowTime(idx) {
+  const row = TIMELINE[idx];
+  if (row.fixed) return row.base;
+  if (state.fixedTime[row.key] != null) return state.fixedTime[row.key];
+  let d = 0; for (let i = 0; i <= idx; i++) d += state.shift[TIMELINE[i].key] || 0;
+  return row.base + d;
+}
+
+// ============================ 保存データ ============================
+const KEY = "taikai_" + CONFIG.id, HIST_KEY = KEY + "_history", EXPORT_KEY = KEY + "_lastExport", DB_NAME = "taikai_backup_" + CONFIG.id, MAX_HISTORY = 100;
+function blankState() {
+  return { app: "taikai-template", sig: configSignature(), updatedAt: new Date().toISOString(),
+    league: {},        // 試合ID → { a: 左チームの人数, b: 右チームの人数 }（左右は進行表の並び）
+    janken: {},        // グループ番号 → { チーム番号: 順番 }
+    shift: {}, fixedTime: {},
+    tour: {}, draw: {}, overall: {} };
+}
+function migrate(s) {
+  if (!s || typeof s !== "object" || s.app !== "taikai-template") return null;
+  for (const k of ["league", "janken", "shift", "fixedTime", "tour", "draw", "overall"]) if (!s[k] || typeof s[k] !== "object") s[k] = {};
+  return s;
+}
+const parse = v => { try { return JSON.parse(v); } catch { return null; } };
+const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
+
+let state = migrate(parse(lsGet(KEY)));
+const bootFromLocal = !!state;
+if (!state) state = blankState();
+let sigMismatch = state.sig !== configSignature();
+
+let drafts = {}, rendering = false;
+
+function persist() {
+  if (VIEW) return;
+  state.updatedAt = new Date().toISOString();
+  const raw = JSON.stringify(state);
+  try { localStorage.setItem(KEY, raw); setStatus("自動保存：" + new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })); }
+  catch { setStatus("保存できません！ バックアップ保存を押してください", true); }
+  saveIDB(raw);
+  updateProgress();
+  schedulePublish();
+}
+function setStatus(t, err) { const s = $("saveStatus"); s.textContent = t; s.classList.toggle("err", !!err); }
+function snapshot(reason) {
+  if (VIEW) return;
+  let h = parse(lsGet(HIST_KEY)) || [];
+  h.push({ at: new Date().toISOString(), reason, state: JSON.stringify(state) });
+  if (h.length > MAX_HISTORY) h = h.slice(-MAX_HISTORY);
+  try { localStorage.setItem(HIST_KEY, JSON.stringify(h)); } catch { try { localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(-20))); } catch {} }
+}
+function undo() {
+  const h = parse(lsGet(HIST_KEY)) || [];
+  if (!h.length) { toast("戻せる変更はありません"); return; }
+  const x = h[h.length - 1], s = migrate(parse(x.state));
+  if (!s) { toast("履歴を復元できませんでした"); return; }
+  const at = new Date(x.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  if (!confirm(`直前の変更「${x.reason}」（${at}）を取り消しますか？`)) return;
+  h.pop(); try { localStorage.setItem(HIST_KEY, JSON.stringify(h)); } catch {}
+  state = s; drafts = {}; persist(); renderAll(); toast(`「${x.reason}」を取り消しました`);
+}
+
+// 端末内バックアップ（IndexedDB）。起動時は、ブラウザ保存と新しい方を使う（空のデータで上書きしない）
+function openDB() { return new Promise((res, rej) => { if (!window.indexedDB) return rej(); const q = indexedDB.open(DB_NAME, 1); q.onupgradeneeded = () => q.result.createObjectStore("s"); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+async function saveIDB(raw) { try { const db = await openDB(); db.transaction("s", "readwrite").objectStore("s").put(raw, "latest"); } catch {} }
+async function readIDB() { try { const db = await openDB(); return await new Promise(r => { const q = db.transaction("s").objectStore("s").get("latest"); q.onsuccess = () => r(migrate(parse(q.result))); q.onerror = () => r(null); }); } catch { return null; } }
+async function recoverIDB() {
+  const s = await readIDB();
+  if (s && (!bootFromLocal || new Date(s.updatedAt) > new Date(state.updatedAt))) {
+    state = s; sigMismatch = state.sig !== configSignature();
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+    renderAll(); toast("端末内バックアップから復元しました");
+  } else if (bootFromLocal) saveIDB(JSON.stringify(state));
+}
+
+function exportBackup() {
+  const blob = new Blob([JSON.stringify({ app: "taikai-template", id: CONFIG.id, version: VERSION, exportedAt: new Date().toISOString(), state }, null, 2)], { type: "application/json" });
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `${CONFIG.id}_backup_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  try { localStorage.setItem(EXPORT_KEY, new Date().toISOString()); } catch {}
+  showLastExport(); toast("バックアップを書き出しました");
+}
+function showLastExport() { const v = lsGet(EXPORT_KEY); $("lastExport").textContent = v ? "最終書出 " + new Date(v).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) : "未書出"; }
+function importBackup(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    const o = parse(r.result), s = migrate(o?.state);
+    if (!o || o.app !== "taikai-template" || o.id !== CONFIG.id || !s || !validState(s)) { alert("このファイルは読み込めません（別の大会のファイルか、壊れています）。"); return; }
+    const n = Object.keys(s.league).length;
+    if (!confirm(`バックアップを読み込みます。\n予選 ${n} 試合入力済み／最終更新 ${new Date(s.updatedAt).toLocaleString("ja-JP")}\n今のデータは置き換わります（直前の状態は「直前の変更を戻す」で戻せます）。`)) return;
+    snapshot("バックアップ読込前"); state = s; sigMismatch = state.sig !== configSignature(); drafts = {}; persist(); renderAll(); toast("バックアップを読み込みました");
+  };
+  r.readAsText(file);
+}
+function validState(s) {
+  for (const v of Object.values(s.league)) if (!v || !isScore(v.a) || !isScore(v.b)) return false;
+  for (const v of Object.values(s.tour)) if (!v || !isScore(v.a) || !isScore(v.b) || (v.va != null && !isScore(v.va)) || (v.vb != null && !isScore(v.vb))) return false;
+  return true;
+}
+function deleteAll() {
+  if ($("deletePhrase").value.trim() !== "全削除") { alert("「全削除」と入力してから押してください。"); return; }
+  if (!confirm("本当に全データを削除しますか？") || !confirm("もう一度確認します。削除してよいですか？（直前の状態は「直前の変更を戻す」で戻せます）")) return;
+  snapshot("全削除前"); state = blankState(); sigMismatch = false; drafts = {}; persist(); renderAll(); $("deletePhrase").value = ""; toast("全データを削除しました");
+}
+
+// ============================ 予選の集計 ============================
+const getL = id => state.league[id] || null;
+function mark(own, opp) { return own === opp ? "△" : own > opp ? "○" : "×"; }
+function pts(mk) { const P = CONFIG.rules.points; return mk === "○" ? P.win : mk === "△" ? P.draw : P.lose; }
+// あるチームから見た結果の一覧
+function resultsOf(i) {
+  const out = [];
+  for (const m of LEAGUE_MATCHES) {
+    if (m.a !== i && m.b !== i) continue;
+    const r = getL(m.id); if (!r) continue;
+    const own = m.a === i ? r.a : r.b, opp = m.a === i ? r.b : r.a, vs = m.a === i ? m.b : m.a;
+    out.push({ vs, own, opp, mk: mark(own, opp), leg: m.leg });
+  }
+  return out;
+}
+// 勝点が同じときに比べる値（rules.rankBy）
+const key2 = s => CONFIG.rules.rankBy === "diff" ? s.own - s.opp : s.own;
+const KEY2_LABEL = CONFIG.rules.rankBy === "diff" ? "得失点差" : "内野人数の合計";
+function statsOf(i) {
+  const s = { i, w: 0, d: 0, l: 0, p: 0, own: 0, opp: 0, played: 0 };
+  for (const r of resultsOf(i)) { s.played++; s.own += r.own; s.opp += r.opp; s.p += pts(r.mk); if (r.mk === "○") s.w++; else if (r.mk === "△") s.d++; else s.l++; }
+  return s;
+}
+function groupComplete(g) { return LEAGUE_MATCHES.filter(m => m.g === g).every(m => getL(m.id)); }
+// 直接対決：同順位のチーム同士の試合だけで勝点を数える
+function directPoints(ids) { const set = new Set(ids), p = {}; ids.forEach(i => p[i] = 0); for (const i of ids) for (const r of resultsOf(i)) if (set.has(r.vs)) p[i] += pts(r.mk); return p; }
+function breakTie(ids, unresolved) {
+  if (ids.length < 2) return ids.slice();
+  const dp = directPoints(ids), sorted = ids.slice().sort((x, y) => dp[y] - dp[x] || x - y), out = [];
+  for (let i = 0; i < sorted.length;) {
+    let j = i + 1; while (j < sorted.length && dp[sorted[j]] === dp[sorted[i]]) j++;
+    const sub = sorted.slice(i, j);
+    if (sub.length === 1) out.push(sub[0]);
+    else if (sub.length < ids.length) out.push(...breakTie(sub, unresolved)); // 一部だけ分かれたら、残りでもう一度
+    else { unresolved.push(sub.slice()); out.push(...jankenSort(sub)); }       // 分かれない → ジャンケン
+    i = j;
+  }
+  return out;
+}
+function jankenSort(ids) { const J = state.janken[TEAMS[ids[0]].g] || {}; return ids.slice().sort((x, y) => ((+J[x] || 999) - (+J[y] || 999)) || x - y); }
+// グループの順位
+function ranking(g) {
+  const ids = GROUP_TEAMS[g], st = {}; ids.forEach(i => st[i] = statsOf(i));
+  const base = ids.slice().sort((x, y) => (st[y].p - st[x].p) || (key2(st[y]) - key2(st[x])) || x - y);
+  const unresolved = [], ordered = [];
+  for (let i = 0; i < base.length;) {
+    let j = i + 1; while (j < base.length && st[base[j]].p === st[base[i]].p && key2(st[base[j]]) === key2(st[base[i]])) j++;
+    ordered.push(...breakTie(base.slice(i, j), unresolved)); i = j;
+  }
+  const complete = groupComplete(g);
+  const J = state.janken[g] || {};
+  const needs = complete ? unresolved.filter(u => { const v = u.map(i => +J[i] || 0); return v.some(x => !x || x > u.length) || new Set(v).size !== v.length; }) : [];
+  const rank = {}; ordered.forEach((i, k) => rank[i] = k + 1);
+  return { stats: st, ordered, rank, unresolved, complete, needs, ready: complete && !needs.length };
+}
+// ジャンケン順位は、同順位の顔ぶれが変わったチームの分だけ取り消す（関係ない試合の修正では残す）
+function tieSig(g) { const m = {}; for (const u of ranking(g).unresolved) { const s = u.slice().sort((x, y) => x - y).join(","); for (const i of u) m[i] = s; } return m; }
+function pruneJanken(g, before) {
+  const after = tieSig(g), J = state.janken[g] || {}; let n = 0;
+  for (const id of Object.keys(J)) if (before[id] !== after[id]) { delete J[id]; n++; }
+  state.janken[g] = J;
+  if (n) toast("同順位の組合せが変わったため、該当するジャンケン順位を取り消しました");
+}
+
+// ============================ 決勝トーナメントの計算 ============================
+// 通過チームと全体順位。全グループの順位が確定するまでは ready=false
+function qualifiers() {
+  const per = TCONF.advance.type === "all" ? Infinity : TCONF.advance.perGroup;
+  const groupsReady = CONFIG.groups.every((_, g) => ranking(g).ready);
+  const list = [];
+  CONFIG.groups.forEach((_, g) => { const R = ranking(g); R.ordered.slice(0, Math.min(per, R.ordered.length)).forEach((i, k) => list.push({ i, g, grank: k + 1, p: R.stats[i].p, own: R.stats[i].own, k2: key2(R.stats[i]) })); });
+  const cmp = (x, y) => (x.grank - y.grank) || (y.p - x.p) || (y.k2 - x.k2);
+  list.sort((x, y) => cmp(x, y) || x.i - y.i);
+  // 全体順位で完全に同じチームは、運営が手で順番を決める（state.overall に保存）
+  const ties = [], order = [];
+  for (let a = 0; a < list.length;) {
+    let b = a + 1; while (b < list.length && !cmp(list[a], list[b])) b++;
+    const grp = list.slice(a, b);
+    if (grp.length > 1) {
+      const sig = grp.map(x => x.i).sort((x, y) => x - y).join(","), M = state.overall[sig] || {};
+      const vals = grp.map(x => +M[x.i] || 0);
+      const okManual = vals.every(v => v >= 1 && v <= grp.length) && new Set(vals).size === vals.length;
+      ties.push({ sig, ids: grp.map(x => x.i), resolved: okManual });
+      order.push(...grp.slice().sort((x, y) => ((+M[x.i] || 99) - (+M[y.i] || 99)) || x.i - y.i));
+    } else order.push(grp[0]);
+    a = b;
+  }
+  const info = {}; order.forEach((x, k) => info[x.i] = { ...x, seed: k + 1 });
+  const needSeedTies = TCONF.seeding === "auto" && ties.some(t => !t.resolved);
+  return { groupsReady, ready: groupsReady && !needSeedTies, order, ties, info };
+}
+// 枠 → チーム番号 の対応（未確定なら null）
+function entryMap(q = qualifiers()) {
+  if (!TP) return null;
+  if (TCONF.seeding === "draw") {
+    if (!q.groupsReady) return null;
+    const ok = new Set(q.order.map(x => x.i)), map = [];
+    for (let s = 0; s < TP; s++) { const v = state.draw[s]; map[s] = IS_BYE[s] ? null : (v != null && ok.has(+v) ? +v : undefined); }
+    return map; // undefined＝まだ選ばれていない枠
+  }
+  if (!q.ready) return null;
+  const map = SEED_AT.map(sd => sd <= TQ ? q.order[sd - 1].i : null);
+  // 1回戦で同じグループのチーム同士が当たらないように、同じ「グループ内順位」のチームどうしを入れ替える
+  if (CONFIG.groups.length > 1 && TCONF.avoidSameGroup !== false) {
+    const grp = i => i == null ? -1 : TEAMS[i].g, tier = i => q.info[i]?.grank;
+    for (let guard = 0; guard < TP; guard++) {
+      let changed = false;
+      for (let k = 0; k < TP / 2; k++) {
+        const a = map[2 * k], b = map[2 * k + 1];
+        if (a == null || b == null || grp(a) !== grp(b)) continue;
+        const x = q.info[a].seed > q.info[b].seed ? 2 * k : 2 * k + 1, xt = map[x], mate = map[x ^ 1];
+        for (let s = 0; s < TP && !changed; s++) {
+          const y = map[s]; if (y == null || (s >> 1) === k || tier(y) !== tier(xt)) continue;
+          const yMate = map[s ^ 1];
+          if (yMate == null) continue;   // 不戦勝の枠とは入れ替えない（不戦勝は上位シードのまま）
+          if (grp(y) !== grp(mate) && grp(xt) !== grp(yMate)) { map[s] = xt; map[x] = y; changed = true; }
+        }
+        if (changed) break;
+      }
+      if (!changed) break;
+    }
+  }
+  return map;
+}
+// 試合の状態を計算する。teamA/teamB＝今の組合せ、valid＝保存された結果が今の組合せのものか
+function resolveT(id, ctx = { q: qualifiers(), memo: {} }) {
+  if (ctx.memo[id]) return ctx.memo[id];
+  if (!("map" in ctx)) ctx.map = entryMap(ctx.q);
+  const m = TMATCH[id];
+  const side = src => {
+    if (src.slot != null) { if (IS_BYE[src.slot]) return { bye: true, team: null }; const t = ctx.map ? ctx.map[src.slot] : null; return { team: t == null ? null : t }; }
+    const r = resolveT(src.win || src.lose, ctx); return { team: src.win ? r.winner : r.loser };
+  };
+  const A = side(m.src[0]), B = side(m.src[1]);
+  const res = { id, m, teamA: A.team, teamB: B.team, byeA: !!A.bye, byeB: !!B.bye, valid: false, stale: false, sa: null, sb: null, va: null, vb: null, winner: null, loser: null, decided: false, needV: false };
+  if (m.walkover) { res.winner = A.bye ? B.team : A.team; res.decided = res.winner != null; return ctx.memo[id] = res; }
+  const v = state.tour[id];
+  if (v && res.teamA != null && res.teamB != null) {
+    if (v.ta === res.teamA && v.tb === res.teamB) { res.valid = true; res.sa = v.a; res.sb = v.b; res.va = v.va ?? null; res.vb = v.vb ?? null; }
+    else if (v.ta === res.teamB && v.tb === res.teamA) { res.valid = true; res.sa = v.b; res.sb = v.a; res.va = v.vb ?? null; res.vb = v.va ?? null; }
+  }
+  res.stale = !!v && !res.valid;
+  if (res.valid) {
+    if (res.sa !== res.sb) res.winner = res.sa > res.sb ? res.teamA : res.teamB;
+    else if (isScore(res.va) && isScore(res.vb) && res.va !== res.vb) res.winner = res.va > res.vb ? res.teamA : res.teamB;
+    else { res.needV = true; if (v.mw === res.teamA || v.mw === res.teamB) res.winner = v.mw; }
+    if (res.winner != null) { res.loser = res.winner === res.teamA ? res.teamB : res.teamA; res.decided = true; }
+  }
+  return ctx.memo[id] = res;
+}
+function allT() { const ctx = { q: qualifiers(), memo: {} }; const out = {}; for (const id of Object.keys(TMATCH)) out[id] = resolveT(id, ctx); return out; }
+function tourValidMap() { const a = allT(), o = {}; for (const id of PLAYABLE_T) o[id] = a[id].valid; return o; }
+function warnNewlyStale(before) {
+  const a = allT(), lost = PLAYABLE_T.filter(id => before[id] && !a[id].valid).map(id => `No.${TMATCH[id].no}（${TMATCH[id].label}）`);
+  if (lost.length) alert(`次のトーナメント結果は、組合せが変わったため「保留」になりました：\n${lost.join("、")}\n\n元の組合せに戻れば自動で復活します。新しい組合せで試合をした場合は、結果を入力し直してください。`);
+}
+// 表彰
+function awards() {
+  if (!TR) return null;
+  const a = allT(), F = a[FINAL_ID];
+  const out = { champion: F.decided ? F.winner : null, runnerUp: F.decided ? F.loser : null, third: [] };
+  if (HAS_THIRD) { if (a.T3rd.decided) out.third = [a.T3rd.winner]; }
+  else if (TR >= 2) { for (const id of [`T${TR - 1}-0`, `T${TR - 1}-1`]) if (a[id].decided && a[id].loser != null) out.third.push(a[id].loser); }
+  return out;
+}
+// まだ決まっていない側の説明（例：総合3位、枠5、No.32の勝者）
+function srcLabel(src, q) {
+  if (src.slot != null) {
+    if (TCONF.seeding === "draw") return `枠${src.slot + 1}`;
+    return `総合${SEED_AT[src.slot]}位`;
+  }
+  const m = TMATCH[src.win || src.lose];
+  if (m.walkover) { const r = resolveT(m.id); return r.winner != null ? teamName(r.winner) : srcLabel(IS_BYE[m.src[0].slot] ? m.src[1] : m.src[0], q); }
+  return `No.${m.no}の${src.win ? "勝者" : "敗者"}`;
+}
+
+// ============================ 入力（下書き → 確定） ============================
+// 入力欄には data-pair（どの試合か）と data-side（l＝左／r＝右）と data-fk（欄ごとの目印）を付ける
+function pairValues(pair) {
+  const [kind, id] = pair.split("|");
+  if (kind === "L") { const r = getL(id); return r ? { l: r.a, r: r.b } : null; }
+  const r = resolveT(id); return r.valid ? { l: r.sa, r: r.sb } : null;
+}
+function syncDraft(el) {
+  const pair = el.dataset.pair, v = toHalf(el.value).replace(/\D/g, "").slice(0, 2);
+  if (el.value !== v) el.value = v;
+  const cur = pairValues(pair), d = drafts[pair] || { l: cur ? String(cur.l) : "", r: cur ? String(cur.r) : "" };
+  d[el.dataset.side] = v; drafts[pair] = d;
+  const same = cur && d.l === String(cur.l) && d.r === String(cur.r);
+  if (same || (!cur && d.l === "" && d.r === "")) delete drafts[pair];
+  markDraft(pair);
+}
+function markDraft(pair) {
+  document.querySelectorAll(`input[data-pair="${CSS.escape(pair)}"]`).forEach(x => x.classList.toggle("draft", !!drafts[pair]));
+  const note = document.querySelector(`[data-note="${CSS.escape(pair)}"]`);
+  if (note) note.textContent = drafts[pair] ? (pairValues(pair) ? "修正中：Enterで確定／Escで取消" : "入力中") : "";
+}
+// 確定。成功したら true
+function commitPair(pair) {
+  const d = drafts[pair]; if (!d) return true;
+  const [kind, id] = pair.split("|");
+  if (kind === "T") return commitTour(id, d);
+  const m = MATCH_BY_ID[id], cur = pairValues(pair);
+  const title = `試合${m.no}（${teamShort(m.a)} 対 ${teamShort(m.b)}）`;
+  const beforeT = tourValidMap();
+  if (d.l === "" && d.r === "") {
+    if (!cur) { delete drafts[pair]; return true; }
+    if (!confirm(`${title} の入力を消しますか？\n変更前 ${cur.l}−${cur.r}`)) return cancelDraft(pair);
+    snapshot(`${title} 消去`); const js = tieSig(m.g); delete state.league[id]; pruneJanken(m.g, js);
+    delete drafts[pair]; persist(); renderAll(); warnNewlyStale(beforeT); toast(`${title} の入力を消しました`); return true;
+  }
+  if (d.l === "" || d.r === "") return false; // 片方だけでは保存しない
+  const nl = +d.l, nr = +d.r;
+  if (!isScore(nl) || !isScore(nr)) { toast(`人数は0〜${CONFIG.rules.maxScore}で入力してください`); return false; }
+  if (cur && !confirm(`${title} の結果を修正しますか？\n変更前 ${cur.l}−${cur.r}\n変更後 ${nl}−${nr}`)) return cancelDraft(pair);
+  snapshot(`${title} ${cur ? "修正" : "入力"}`);
+  const js = tieSig(m.g);
+  state.league[id] = { a: nl, b: nr, at: new Date().toISOString() };
+  pruneJanken(m.g, js);
+  delete drafts[pair]; persist(); renderAll(); if (cur) warnNewlyStale(beforeT); return true;
+}
+function cancelDraft(pair) { delete drafts[pair]; renderAll(); toast("修正を取り消しました"); return true; }
+// トーナメントの結果を確定
+function commitTour(id, d) {
+  const pair = "T|" + id, r = resolveT(id), m = TMATCH[id];
+  if (r.teamA == null || r.teamB == null) { delete drafts[pair]; renderAll(); toast("まだ対戦チームが決まっていません"); return true; }
+  const cur = r.valid ? { l: r.sa, r: r.sb } : null, title = `No.${m.no} ${m.label}（${teamShort(r.teamA)} 対 ${teamShort(r.teamB)}）`;
+  const before = tourValidMap();
+  if (d.l === "" && d.r === "") {
+    if (!cur) { delete drafts[pair]; return true; }
+    if (!confirm(`${title} の入力を消しますか？\n変更前 ${cur.l}−${cur.r}`)) return cancelDraft(pair);
+    snapshot(`${title} 消去`); delete state.tour[id]; delete drafts[pair]; persist(); renderAll(); warnNewlyStale(before); return true;
+  }
+  if (d.l === "" || d.r === "") return false;
+  const nl = +d.l, nr = +d.r;
+  if (!isScore(nl) || !isScore(nr)) { toast(`人数は0〜${CONFIG.rules.maxScore}で入力してください`); return false; }
+  if (cur && !confirm(`${title} の結果を修正しますか？\n変更前 ${cur.l}−${cur.r}\n変更後 ${nl}−${nr}`)) return cancelDraft(pair);
+  snapshot(`${title} ${cur ? "修正" : "入力"}`);
+  const old = state.tour[id], keep = nl === nr && r.valid && cur && cur.l === cur.r; // 同数のまま直したときだけVポイントと手選択を残す
+  state.tour[id] = { a: nl, b: nr, ta: r.teamA, tb: r.teamB, va: keep ? r.va : null, vb: keep ? r.vb : null, mw: keep ? old?.mw ?? null : null, at: new Date().toISOString() };
+  delete drafts[pair]; persist(); renderAll(); if (cur) warnNewlyStale(before); return true;
+}
+// Vポイント（同数のときのサドンデス）を保存
+function saveV(id) {
+  const r = resolveT(id), ins = [...document.querySelectorAll(`input.vsc[data-vid="${id}"]`)];
+  const get = s => toHalf(ins.find(x => x.dataset.vside === s)?.value ?? "").replace(/\D/g, "");
+  const a = get("a"), b = get("b");
+  if (!r.valid) return false;
+  if (a === "" && b === "") { if (r.va == null) return true; snapshot(`No.${TMATCH[id].no} Vポイント消去`); state.tour[id] = { ...state.tour[id], a: r.sa, b: r.sb, ta: r.teamA, tb: r.teamB, va: null, vb: null }; persist(); renderAll(); return true; }
+  if (a === "" || b === "") return false;
+  const va = +a, vb = +b;
+  if (!isScore(va) || !isScore(vb)) { toast(`Vポイントは0〜${CONFIG.rules.maxScore}で入力してください`); return false; }
+  if (r.va != null && (r.va !== va || r.vb !== vb) && !confirm(`Vポイントを修正しますか？\n変更前 V${r.va}−V${r.vb}\n変更後 V${va}−V${vb}`)) { renderAll(); return true; }
+  const before = tourValidMap();
+  snapshot(`No.${TMATCH[id].no} Vポイント`);
+  state.tour[id] = { ...state.tour[id], a: r.sa, b: r.sb, ta: r.teamA, tb: r.teamB, va, vb };
+  persist(); renderAll(); warnNewlyStale(before);
+  if (va === vb) toast("Vポイントも同数です。勝者を選んでください");
+  return true;
+}
+function saveManualWinner(el) {
+  const id = el.dataset.mw, r = resolveT(id); if (!r.valid) return;
+  snapshot(`No.${TMATCH[id].no} 勝者の選択`);
+  state.tour[id] = { ...state.tour[id], a: r.sa, b: r.sb, ta: r.teamA, tb: r.teamB, va: r.va, vb: r.vb, mw: el.value === "" ? null : +el.value };
+  persist(); renderAll();
+}
+
+const inputList = () => [...document.querySelectorAll("input.sc:not(:disabled)")];
+function focusFk(fk) { if (!fk) return null; const n = document.querySelector(`[data-fk="${CSS.escape(fk)}"]`); if (n && !n.disabled) { n.focus({ preventScroll: false }); n.select?.(); return n; } return null; }
+document.addEventListener("input", e => { if (e.target.matches?.("input.sc") && !e.isComposing) syncDraft(e.target); });
+document.addEventListener("compositionend", e => { if (e.target.matches?.("input.sc")) syncDraft(e.target); });
+document.addEventListener("wheel", e => { if (e.target.matches?.("input.sc")) e.target.blur(); }, { passive: true });
+document.addEventListener("keydown", e => {
+  const el = e.target; if (!el.matches?.("input.sc")) return;
+  const pair = el.dataset.pair;
+  if (e.key === "Escape") { if (drafts[pair]) { delete drafts[pair]; renderAll(); focusFk(el.dataset.fk); toast("入力中の変更を取り消しました"); } return; }
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); return; }
+  if (e.key !== "Enter" || e.isComposing || e.keyCode === 229) return;
+  e.preventDefault(); syncDraft(el);
+  const list = inputList(), nxt = list[list.indexOf(el) + 1];
+  if (el.dataset.side === "l" && nxt && nxt.dataset.pair === pair) { nxt.focus(); nxt.select(); return; }
+  const fk = el.dataset.fk;
+  if (!commitPair(pair)) { focusFk(fk); return; }
+  // トーナメントで同数になったら、その試合のVポイント欄へ
+  if (pair.startsWith("T|")) { const id = pair.slice(2), r = resolveT(id); if (r.valid && r.needV && !r.decided) { const v = document.querySelector(`input.vsc[data-vid="${id}"][data-vside="a"]`); if (v) { v.focus(); v.select(); return; } } }
+  const after = inputList(), i = after.findIndex(x => x.dataset.fk === fk), n = after[i + 1];
+  if (n) { n.focus(); n.select(); }
+});
+// Vポイント欄：左 → Enter → 右 → Enter で保存
+document.addEventListener("keydown", e => {
+  const el = e.target; if (!el.matches?.("input.vsc") || e.key !== "Enter" || e.isComposing || e.keyCode === 229) return;
+  e.preventDefault(); el.value = toHalf(el.value).replace(/\D/g, "").slice(0, 2);
+  const id = el.dataset.vid;
+  if (el.dataset.vside === "a") { const b = document.querySelector(`input.vsc[data-vid="${id}"][data-vside="b"]`); b?.focus(); b?.select(); return; }
+  if (!saveV(id)) { toast("Vポイントを両方入れてください"); return; }
+  const r = resolveT(id);
+  if (!r.decided) { document.querySelector(`select[data-mw="${id}"]`)?.focus(); return; }
+  const list = inputList(), anchor = document.querySelector(`input.sc[data-pair="T|${id}"][data-side="r"]`), n = list[list.indexOf(anchor) + 1];
+  if (n) { n.focus(); n.select(); }
+});
+document.addEventListener("focusout", e => {
+  const el = e.target; if (rendering || !el.matches?.("input.sc")) return;
+  const pair = el.dataset.pair, rel = e.relatedTarget;
+  if (rel?.dataset?.pair === pair) return;
+  setTimeout(() => {
+    if (document.activeElement?.dataset?.pair === pair) return;
+    if (drafts[pair]) { const nfk = rel?.dataset?.fk; commitPair(pair); const a = document.activeElement; if (nfk && (!a || a === document.body)) focusFk(nfk); }
+  }, 0);
+});
+
+// ============================ 時刻の手直し ============================
+function editTime(idx) {
+  if (VIEW) return;
+  const row = TIMELINE[idx]; if (row.fixed) return;
+  const cur = rowTime(idx), v = prompt(`新しい時刻を入れてください（例 ${fmtHM(cur)}）。空欄にすると予定に戻します。`, fmtHM(cur));
+  if (v === null) return;
+  if (v.trim() === "") { snapshot("時刻を予定に戻す"); delete state.fixedTime[row.key]; delete state.shift[row.key]; persist(); renderAll(); return; }
+  const t = parseHM(v); if (t == null) { alert("時刻は 10:15 のように入れてください。"); return; }
+  const delta = t - cur; if (!delta) return;
+  snapshot(`時刻 ${fmtHM(cur)}→${fmtHM(t)}`);
+  if (confirm(`以降の試合も同じだけ（${delta > 0 ? "+" : ""}${Math.round(delta / 60)}分）ずらしますか？\nOK：以降もまとめてずらす　キャンセル：この行だけ直す`)) state.shift[row.key] = (state.shift[row.key] || 0) + delta;
+  else state.fixedTime[row.key] = t;
+  persist(); renderAll();
+}
+
+// ============================ 表示 ============================
+// 次に行う回（未入力・未決着の試合がある最初の回）
+function nextRowKey(A = allT()) {
+  for (const row of TIMELINE) {
+    if (row.kind === "L" && LEAGUE_ROUNDS[row.round].some(m => !getL(m.id))) return row.key;
+    if (row.kind === "T" && TSLOTS[row.slot].some(id => !A[id].decided)) return row.key;
+  }
+  return null;
+}
+function scoreInputs(pair, side, value, fk, disabled) {
+  if (VIEW) return `<span class="ro">${esc(value ?? "")}</span>`;
+  const d = drafts[pair], v = d ? d[side] : (value ?? "");
+  return `<input class="sc${d ? " draft" : ""}" type="text" inputmode="numeric" autocomplete="off" maxlength="2" data-pair="${pair}" data-side="${side}" data-fk="${fk}" value="${esc(v)}" aria-label="人数"${disabled ? " disabled" : ""}>`;
+}
+// トーナメントの同数時：Vポイント欄と、勝者を手で選ぶ欄
+function tieControls(r) {
+  if (VIEW) return "";
+  const id = r.id;
+  let h = `<div class="vrow">V<input class="vsc" type="text" inputmode="numeric" maxlength="2" autocomplete="off" data-vid="${id}" data-vside="a" value="${r.va ?? ""}" aria-label="左のVポイント">−<input class="vsc" type="text" inputmode="numeric" maxlength="2" autocomplete="off" data-vid="${id}" data-vside="b" value="${r.vb ?? ""}" aria-label="右のVポイント">V</div>`;
+  if (!(isScore(r.va) && isScore(r.vb) && r.va !== r.vb)) {
+    const mw = state.tour[id]?.mw;
+    h += `<div class="vrow"><select data-mw="${id}"><option value="">勝者を選ぶ</option><option value="${r.teamA}" ${mw === r.teamA ? "selected" : ""}>${esc(teamShort(r.teamA))}</option><option value="${r.teamB}" ${mw === r.teamB ? "selected" : ""}>${esc(teamShort(r.teamB))}</option></select></div>`;
+  }
+  return h;
+}
+function renderSchedule() {
+  const A = allT(), q = qualifiers(), nextKey = nextRowKey(A);
+  let h = `<table class="sched"><thead><tr><th>時刻</th><th>試合</th><th>コート</th><th>チーム</th><th colspan="3">内野人数</th><th>チーム</th><th>結果</th></tr></thead><tbody>`;
+  TIMELINE.forEach((row, idx) => {
+    const t = rowTime(idx), changed = !row.fixed && t !== row.base, isNext = row.key === nextKey;
+    const timeCell = (span) => `<td class="time${changed ? " changed" : ""}" ${span > 1 ? `rowspan="${span}"` : ""} data-tidx="${idx}" title="クリックで時刻を直す">${fmtHM(t)}${changed ? `<span class="orig">予定${fmtHM(row.base)}</span>` : ""}</td>`;
+    if (row.kind === "ev" || row.kind === "brk") { h += `<tr class="ev">${timeCell(1)}<td colspan="8">${esc(row.label)}${row.minutes ? `（${row.minutes}分）` : ""}</td></tr>`; return; }
+    if (row.kind === "L") {
+      const ms = LEAGUE_ROUNDS[row.round];
+      ms.forEach((m, j) => {
+        const r = getL(m.id), pair = "L|" + m.id;
+        const winL = r && r.a > r.b, winR = r && r.b > r.a;
+        const res = r ? (r.a === r.b ? "引き分け" : `${teamShort(winL ? m.a : m.b)} の勝ち`) : "";
+        h += `<tr class="${isNext ? "next" : ""}" ${j === 0 && isNext ? 'id="nextRow"' : ""}>${j === 0 ? timeCell(ms.length) : ""}
+          <td>${m.no}</td><td>${CONFIG.courts[m.court]}</td>
+          <td class="team${winL ? " win" : ""}">${esc(teamName(m.a))}${CONFIG.groups.length > 1 ? `<span class="src">${esc(groupName(m.g))}組</span>` : ""}</td>
+          <td>${scoreInputs(pair, "l", r?.a, m.id + "|l")}</td><td>−</td><td>${scoreInputs(pair, "r", r?.b, m.id + "|r")}</td>
+          <td class="team${winR ? " win" : ""}">${esc(teamName(m.b))}${CONFIG.groups.length > 1 ? `<span class="src">${esc(groupName(m.g))}組</span>` : ""}</td>
+          <td class="res">${esc(res)}<div class="pair-note" data-note="${pair}"></div></td></tr>`;
+      });
+      return;
+    }
+    // トーナメントの回
+    const ids = TSLOTS[row.slot];
+    ids.forEach((id, j) => {
+      const r = A[id], m = TMATCH[id], pair = "T|" + id, known = r.teamA != null && r.teamB != null;
+      const nameCell = (team, src, win) => team != null
+        ? `<td class="team${win ? " win" : ""}">${win ? "○ " : ""}${esc(teamName(team))}<span class="src">${esc(srcLabel(src, q))}</span></td>`
+        : `<td class="team tbd">${esc(srcLabel(src, q))}</td>`;
+      let res = "";
+      if (r.decided) res = `<b style="color:var(--win)">${esc(teamShort(r.winner))} の勝ち</b>${r.valid && r.sa === r.sb && isScore(r.va) && isScore(r.vb) && r.va !== r.vb ? `<div>V${r.va}｜${r.sa}−${r.sb}｜V${r.vb}</div>` : ""}`;
+      if (r.valid && r.needV) res += tieControls(r);
+      if (r.stale) { const v = state.tour[id]; res += `<span class="hold">保留：組合せが変わりました<br>前回 ${esc(teamShort(v.ta))} ${v.a}−${v.b} ${esc(teamShort(v.tb))}</span>`; }
+      h += `<tr class="tour${isNext ? " next" : ""}" ${j === 0 && isNext ? 'id="nextRow"' : ""}>${j === 0 ? timeCell(ids.length) : ""}
+        <td>${m.no}<div class="tlabel">${esc(m.label)}</div></td><td>${CONFIG.courts[m.court]}</td>
+        ${nameCell(r.teamA, m.src[0], r.decided && r.winner === r.teamA)}
+        <td>${scoreInputs(pair, "l", r.valid ? r.sa : "", id + "|l", !known)}</td><td>−</td><td>${scoreInputs(pair, "r", r.valid ? r.sb : "", id + "|r", !known)}</td>
+        ${nameCell(r.teamB, m.src[1], r.decided && r.winner === r.teamB)}
+        <td class="res">${res}<div class="pair-note" data-note="${pair}"></div></td></tr>`;
+    });
+  });
+  $("scheduleRoot").innerHTML = h + "</tbody></table>";
+}
+
+// ============================ トーナメント表（表示専用）と表彰 ============================
+function renderTournament() {
+  const root = $("tournamentRoot");
+  if (!TP) { root.innerHTML = `<p class="hint">決勝トーナメントはありません（進出チームが2未満）。</p>`; return; }
+  const q = qualifiers(), A = allT();
+  let h = `<p class="hint">結果は進行表で入力します。この表は自動で更新されます。赤字と○は勝ったチームです。</p>`;
+  // 組合せの元になる情報
+  if (!q.groupsReady) h += `<div class="panel">予選の順位がすべて確定すると、組合せが決まります。</div>`;
+  else if (TCONF.seeding === "auto") {
+    h += `<div class="panel"><h3>全体順位（組合せの元）</h3><table class="seedtable"><tr><th>総合</th><th>チーム</th>${CONFIG.groups.length > 1 ? "<th>グループ</th>" : ""}<th>グループ内順位</th><th>勝点</th><th>${KEY2_LABEL}</th></tr>`;
+    q.order.forEach((x, k) => h += `<tr><td>${k + 1}</td><td class="l">${esc(teamName(x.i))}</td>${CONFIG.groups.length > 1 ? `<td>${esc(groupName(x.g))}</td>` : ""}<td>${x.grank}</td><td>${x.p}</td><td>${x.k2}</td></tr>`);
+    h += `</table>`;
+    for (const t of q.ties) {
+      const M = state.overall[t.sig] || {};
+      h += `<div class="tiebox"><b>全体順位が完全に同じです。運営が順番を決めてください：</b>${t.ids.map(i => `${esc(teamShort(i))}<select data-osig="${t.sig}" data-oteam="${i}"><option value="">順番</option>${t.ids.map((_, n) => `<option value="${n + 1}" ${+M[i] === n + 1 ? "selected" : ""}>${n + 1}番目</option>`).join("")}</select>`).join("")}</div>`;
+    }
+    h += `</div>`;
+  } else {
+    const used = new Set(Object.values(state.draw).map(Number)), map = entryMap(q);
+    h += `<div class="panel"><h3>当日抽選の結果を入れてください（枠ごとにチームを選ぶ）</h3><div class="draw-grid">`;
+    for (let s = 0; s < TP; s++) {
+      if (IS_BYE[s]) { h += `<label>枠${s + 1}：<span style="color:#888">（空き枠：相手は不戦勝）</span></label>`; continue; }
+      const cur = map?.[s];
+      h += `<label>枠${s + 1}：<select data-dslot="${s}"><option value="">未定</option>${q.order.map(x => `<option value="${x.i}" ${cur === x.i ? "selected" : ""} ${used.has(x.i) && cur !== x.i ? "disabled" : ""}>${CONFIG.groups.length > 1 ? esc(groupName(x.g)) + "組" : ""}${x.grank}位 ${esc(teamShort(x.i))}</option>`).join("")}</select></label>`;
+    }
+    const filled = map ? map.filter(v => v != null).length : 0;
+    h += `</div><p class="hint">選んだ枠：${filled}/${TQ}</p></div>`;
+  }
+  h += `<div class="bracket-scroll">${bracketHTML(A, q)}</div>`;
+  const aw = awards();
+  if (aw) h += `<table class="awards" style="margin-top:8px"><tr><th>優勝</th><td>${esc(teamName(aw.champion)) || "—"}</td></tr><tr><th>準優勝</th><td>${esc(teamName(aw.runnerUp)) || "—"}</td></tr><tr><th>3位</th><td>${aw.third.length ? aw.third.map(i => esc(teamName(i))).join("、") : "—"}</td></tr></table>`;
+  root.innerHTML = h;
+}
+// 線でつないだトーナメント表。位置はチーム数から自動で計算する
+function bracketHTML(A, q) {
+  const SLOT = 40, ENTRY_W = 150, COL0 = 0, COLW = 230, CARD_H = 68, TOP = 10;
+  const colX = r => 170 + (r - 1) * COLW;
+  const slotY = s => TOP + s * SLOT + SLOT / 2;
+  const center = {}, anchor = {};      // 試合の中心y／右端の出口
+  const map = entryMap(q);
+  let boxes = "", lines = "";
+  const line = (x1, y1, x2, y2, win) => lines += `<path d="M${x1},${y1} H${(x1 + x2) / 2} V${y2} H${x2}" fill="none" stroke="${win ? "#c62828" : "#555"}" stroke-width="${win ? 3 : 1.4}"/>`;
+  const entryBox = (s, y) => {
+    const t = map ? map[s] : null, label = TCONF.seeding === "draw" ? `枠${s + 1}` : `総合${SEED_AT[s]}位`;
+    boxes += `<div class="entry${t == null ? " tbd" : ""}" style="left:${COL0}px;top:${y - 14}px"><span class="seed">${label}</span>${t != null ? esc(teamShort(t)) : ""}</div>`;
+  };
+  for (let r = 1; r <= TR; r++) {
+    for (let k = 0; k < TP / 2 ** r; k++) {
+      const id = `T${r}-${k}`, m = TMATCH[id], res = A[id];
+      if (r === 1) {
+        if (m.walkover) {               // 不戦勝：チームの箱を2枠の真ん中に置き、そこから次の試合へ線を引く
+          const s = IS_BYE[2 * k] ? 2 * k + 1 : 2 * k, y = (slotY(2 * k) + slotY(2 * k + 1)) / 2;
+          entryBox(s, y); center[id] = y; anchor[id] = { x: ENTRY_W, y }; continue;
+        }
+        entryBox(2 * k, slotY(2 * k)); entryBox(2 * k + 1, slotY(2 * k + 1));
+        center[id] = (slotY(2 * k) + slotY(2 * k + 1)) / 2;
+      } else center[id] = (center[`T${r - 1}-${2 * k}`] + center[`T${r - 1}-${2 * k + 1}`]) / 2;
+      const x = colX(r), y = center[id] - CARD_H / 2;
+      boxes += cardHTML(res, x, y);
+      // 入ってくる線
+      const inA = y + 16 + 11, inB = y + 16 + 33;
+      if (r === 1) { line(ENTRY_W, slotY(2 * k), x, inA, res.decided && res.winner === res.teamA); line(ENTRY_W, slotY(2 * k + 1), x, inB, res.decided && res.winner === res.teamB); }
+      else {
+        const c0 = anchor[`T${r - 1}-${2 * k}`], c1 = anchor[`T${r - 1}-${2 * k + 1}`];
+        line(c0.x, c0.y, x, inA, A[`T${r - 1}-${2 * k}`].decided); line(c1.x, c1.y, x, inB, A[`T${r - 1}-${2 * k + 1}`].decided);
+      }
+      anchor[id] = { x: x + 200, y: center[id] };
+    }
+  }
+  let height = TOP * 2 + TP * SLOT;
+  if (HAS_THIRD) { const y = height + 6; boxes += cardHTML(A.T3rd, colX(TR), y); height = y + CARD_H + 10; }
+  const width = colX(TR) + 210;
+  return `<div class="bracket" style="width:${width}px;height:${height}px"><svg width="${width}" height="${height}">${lines}</svg>${boxes}</div>`;
+}
+function cardHTML(r, x, y) {
+  const m = r.m, t = TSLOTS[m.slot] ? fmtHM(rowTime(TIMELINE.findIndex(row => row.kind === "T" && row.slot === m.slot))) : "";
+  const vtxt = (r.valid && r.sa === r.sb && isScore(r.va) && isScore(r.vb) && r.va !== r.vb);
+  const tl = (team, s, v, win) => `<div class="tl${win ? " win" : ""}"><span>${win ? "○ " : ""}${team != null ? esc(teamShort(team)) : '<span style="color:#999">未定</span>'}</span><span class="s">${vtxt ? `<small>V${v}</small> ` : ""}${s ?? ""}</span></div>`;
+  return `<div class="bcard${r.stale ? " stale" : ""}" style="left:${x}px;top:${y}px"><div class="meta">No.${m.no}｜${esc(m.label)}｜${t}｜${CONFIG.courts[m.court] ?? ""}コート${r.stale ? "｜保留" : ""}</div>${tl(r.teamA, r.valid ? r.sa : "", r.va, r.decided && r.winner === r.teamA)}${tl(r.teamB, r.valid ? r.sb : "", r.vb, r.decided && r.winner === r.teamB)}</div>`;
+}
+function renderLeagues() {
+  let h = "";
+  CONFIG.groups.forEach((gr, g) => {
+    const R = ranking(g), ids = GROUP_TEAMS[g];
+    const done = LEAGUE_MATCHES.filter(m => m.g === g && getL(m.id)).length, total = LEAGUE_MATCHES.filter(m => m.g === g).length;
+    h += `<div class="group-title">${CONFIG.groups.length > 1 ? esc(gr.name) + "グループ　" : ""}${R.ready ? "確定" : "暫定"}（${done}/${total}試合）</div><div class="league-wrap"><table class="league"><thead><tr><th>No.</th><th>チーム</th>`;
+    ids.forEach((i, k) => h += `<th>${k + 1}<br>${esc(teamShort(i))}</th>`);
+    h += `<th>勝</th><th>分</th><th>敗</th><th>勝点</th><th>内野<br>自</th><th>内野<br>相</th><th>順位</th></tr></thead><tbody>`;
+    ids.forEach((i, k) => {
+      const s = R.stats[i];
+      h += `<tr><td>${k + 1}</td><td class="name">${esc(teamName(i))}</td>`;
+      ids.forEach(j => {
+        if (i === j) { h += `<td class="diag"></td>`; return; }
+        const rs = resultsOf(i).filter(r => r.vs === j).sort((x, y) => x.leg - y.leg);
+        h += `<td>${rs.map(r => `<span class="mk${r.mk === "○" ? " w" : ""}">${r.mk}</span><span class="sc2">${r.own}−${r.opp}</span>`).join("")}</td>`;
+      });
+      h += `<td>${s.w}</td><td>${s.d}</td><td>${s.l}</td><td><b>${s.p}</b></td><td>${s.own}</td><td>${s.opp}</td><td class="rank${R.ready ? "" : " prov"}">${R.ready ? "" : "暫"}${R.rank[i]}</td></tr>`;
+    });
+    h += `</tbody></table></div><p class="hint">順位：勝点 → ${KEY2_LABEL} → 同順位チーム同士の直接対決 → ジャンケン</p>`;
+    if (R.complete && R.unresolved.length) {
+      const J = state.janken[g] || {};
+      R.unresolved.forEach(u => {
+        h += `<div class="tiebox"><b>ジャンケンで順位を決めてください：</b>`;
+        u.forEach(i => { h += `${esc(teamShort(i))}<select data-jg="${g}" data-jt="${i}"><option value="">順位</option>${u.map((_, n) => `<option value="${n + 1}" ${+J[i] === n + 1 ? "selected" : ""}>${n + 1}番目</option>`).join("")}</select>`; });
+        h += `</div>`;
+      });
+    }
+  });
+  $("leagueRoot").innerHTML = h;
+}
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.matches?.("select[data-jg]")) {
+    const g = +el.dataset.jg, before = tourValidMap(); snapshot(`${groupName(g)}組 ジャンケン`);
+    state.janken[g] = state.janken[g] || {};
+    if (el.value) state.janken[g][el.dataset.jt] = +el.value; else delete state.janken[g][el.dataset.jt];
+    persist(); renderAll(); warnNewlyStale(before);
+  } else if (el.matches?.("select[data-osig]")) {        // 全体順位の手入力
+    const sig = el.dataset.osig, before = tourValidMap(); snapshot("全体順位の入力");
+    state.overall[sig] = state.overall[sig] || {};
+    if (el.value) state.overall[sig][el.dataset.oteam] = +el.value; else delete state.overall[sig][el.dataset.oteam];
+    persist(); renderAll(); warnNewlyStale(before);
+  } else if (el.matches?.("select[data-dslot]")) {       // 当日抽選の枠
+    const s = el.dataset.dslot, before = tourValidMap(); snapshot(`枠${+s + 1} の抽選入力`);
+    if (el.value === "") delete state.draw[s]; else state.draw[s] = +el.value;
+    persist(); renderAll(); warnNewlyStale(before);
+  } else if (el.matches?.("select[data-mw]")) saveManualWinner(el);
+  else if (el.matches?.("input.vsc")) { /* Enterで保存する */ }
+});
+function updateProgress() {
+  const done = LEAGUE_MATCHES.filter(m => getL(m.id)).length, A = allT();
+  const tdone = PLAYABLE_T.filter(id => A[id].decided).length;   // 勝者が決まった試合だけを数える（保留は数えない）
+  $("progress").textContent = `予選 ${done}/${LEAGUE_MATCHES.length}` + (TP ? `｜トーナメント ${tdone}/${PLAYABLE_T.length}` : "");
+}
+function renderAll() {
+  const fk = document.activeElement?.dataset?.fk;
+  rendering = true;
+  try {
+    for (const [fn, root] of [[renderSchedule, "scheduleRoot"], [renderLeagues, "leagueRoot"], [renderTournament, "tournamentRoot"]]) {
+      try { fn(); } catch (err) { console.error(err); $(root).innerHTML = `<div class="errbox">表示エラー：${esc(err.message)}\n（データは保存されています。バックアップ保存をしてから開き直してください）</div>`; }
+    }
+    for (const p of Object.keys(drafts)) markDraft(p);
+    updateProgress();
+    if (VIEW) { document.querySelectorAll(".tiebox").forEach(e => e.remove()); document.querySelectorAll("#tournamentRoot .panel").forEach(p => { if (p.querySelector("select[data-dslot]")) p.remove(); }); fitView(); }
+    const w = $("warnBar");
+    if (sigMismatch) { w.textContent = "⚠ 大会の設定（チーム・グループ・コートなど）が、保存データを作ったときと変わっています。進行表の並びがずれている可能性があります。設定を元に戻すか、バックアップ保存のうえ「全データを削除」してから始め直してください。"; w.classList.remove("hidden"); }
+    else w.classList.add("hidden");
+  } finally { rendering = false; }
+  if (fk) focusFk(fk);
+}
+
+// ============================ 結果の公開（速報ページ） ============================
+// 運営のパソコン：メールアドレスとパスワードでログインし（パスワードは保存しない）、入力のたびに結果を送る。
+// 書き込めるのは、データベースのルールで許可した運営者だけ。見る側はログイン不要。
+const AUTH_KEY = KEY + "_auth", PUBON_KEY = KEY + "_pubOn";
+let idToken = null, idExp = 0, pubTimer = null, pubRetry = null, pubBusy = false, pubAgain = false;
+const authInfo = () => parse(lsGet(AUTH_KEY));
+const pubOn = () => lsGet(PUBON_KEY) === "1";
+const pubPath = () => `${DB_URL}/live/${encodeURIComponent(CONFIG.id)}.json`;
+function setPubStatus(t, err) { const s = $("pubStatus"); s.textContent = t; s.classList.remove("hidden"); s.classList.toggle("err", !!err); }
+function authErrorText(code) {
+  return ({ INVALID_LOGIN_CREDENTIALS: "メールアドレスかパスワードが違います", INVALID_PASSWORD: "パスワードが違います", EMAIL_NOT_FOUND: "このメールアドレスは登録されていません", USER_DISABLED: "このアカウントは無効になっています", TOO_MANY_ATTEMPTS_TRY_LATER: "試行回数が多すぎます。しばらく待ってください", INVALID_EMAIL: "メールアドレスの書き方が正しくありません" })[code] || code;
+}
+async function signIn(email, password) {
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(PUB.apiKey)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, returnSecureToken: true }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(authErrorText(j?.error?.message?.split(" ")[0] || String(r.status)));
+  idToken = j.idToken; idExp = Date.now() + (+j.expiresIn || 3600) * 1000;
+  try { localStorage.setItem(AUTH_KEY, JSON.stringify({ rt: j.refreshToken, uid: j.localId, email: j.email })); } catch {}
+}
+async function getToken() {
+  if (idToken && Date.now() < idExp - 60000) return idToken;
+  const a = authInfo(); if (!a?.rt) throw new Error("ログインしていません");
+  const r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(PUB.apiKey)}`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(a.rt) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(r.status === 400 ? "ログインの期限が切れました。もう一度ログインしてください" : `ログインを確認できません（${r.status}）`);
+  idToken = j.id_token; idExp = Date.now() + (+j.expires_in || 3600) * 1000;
+  if (j.refresh_token && j.refresh_token !== a.rt) { a.rt = j.refresh_token; try { localStorage.setItem(AUTH_KEY, JSON.stringify(a)); } catch {} }
+  return idToken;
+}
+function pubPayload() {
+  return { app: "taikai-template", id: CONFIG.id, sig: configSignature(), version: VERSION, updatedAt: state.updatedAt, publishedAt: new Date().toISOString(),
+    data: { league: state.league, janken: state.janken, overall: state.overall, draw: state.draw, tour: state.tour, shift: state.shift, fixedTime: state.fixedTime, notice: state.notice || null } };
+}
+function schedulePublish() {
+  if (VIEW || !PUB.enabled || !pubOn() || !authInfo()) return;
+  clearTimeout(pubTimer); pubTimer = setTimeout(publishNow, 1200);
+}
+async function publishNow() {
+  if (VIEW || !PUB.enabled) return;
+  if (pubBusy) { pubAgain = true; return; }
+  pubBusy = true; clearTimeout(pubRetry);
+  try {
+    const t = await getToken();
+    const r = await fetch(pubPath() + "?auth=" + encodeURIComponent(t), { method: "PUT", body: JSON.stringify(pubPayload()) });
+    if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? "書き込みが許可されていません（データベースのルールと、ログインしたアカウントを確認）" : `送信できません（${r.status}）`);
+    setPubStatus("公開済 " + new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  } catch (e) {
+    setPubStatus("送信待ち：" + (e.message === "Failed to fetch" ? "ネットにつながっていません" : e.message) + "（30秒後に再送）", true);
+    pubRetry = setTimeout(publishNow, 30000);
+  } finally {
+    pubBusy = false;
+    if (pubAgain) { pubAgain = false; schedulePublish(); }
+  }
+}
+async function clearPublic() {
+  if (!confirm("速報ページのデータを消しますか？\n（このパソコンの集計データは消えません。速報ページには何も表示されなくなります）")) return;
+  try { localStorage.setItem(PUBON_KEY, "0"); } catch {}
+  try { const t = await getToken(); const r = await fetch(pubPath() + "?auth=" + encodeURIComponent(t), { method: "DELETE" }); if (!r.ok) throw new Error(`消せませんでした（${r.status}）`); setPubStatus("公開データを消しました"); toast("速報ページのデータを消しました"); }
+  catch (e) { setPubStatus(e.message, true); }
+  renderPubBox();
+}
+function renderPubBox() {
+  const box = $("pubBox"); if (!box) return;
+  if (!PUB.enabled) { box.innerHTML = `<b>結果の公開（速報ページ）</b><div class="progress">CONFIG の publish を設定すると使えます（enabled: true、databaseURL、apiKey）。</div>`; return; }
+  const a = authInfo(), n = state.notice || {};
+  let h = `<b>結果の公開（速報ページ）</b><div class="progress">ログインした運営者だけが送信できます。パスワードはこのパソコンに保存しません。速報ページは、このファイルを公開したURL（または、このファイルに ?view を付けたURL）で見られます。</div>`;
+  if (!a) {
+    h += `<div class="row"><input type="email" id="pubEmail" placeholder="運営者のメールアドレス" autocomplete="username"> <input type="password" id="pubPass" placeholder="パスワード" autocomplete="current-password"> <button id="pubLogin" class="primary">ログイン</button></div><div id="pubMsg" style="color:var(--danger);font-weight:700;font-size:13px"></div>`;
+  } else {
+    h += `<div class="row">ログイン中：${esc(a.email || "")}　<label><input type="checkbox" id="pubOnChk" ${pubOn() ? "checked" : ""}> 公開する</label> <button id="pubNow">今すぐ送信</button> <button id="pubView">速報ページを開く</button> <button id="pubClear" class="danger">公開データを消す</button> <button id="pubLogout">ログアウト</button></div>
+      <div class="row" style="display:block"><div>速報ページのお知らせ（空欄なら表示しません）</div><textarea id="noticeText" maxlength="300" placeholder="例：進行が10分遅れています／昼食は12:10〜">${esc(n.text || "")}</textarea>
+      <label><input type="checkbox" id="noticeWarn" ${n.level === "warn" ? "checked" : ""}> 注意（赤で表示）</label> <button id="noticeSave" class="primary">お知らせを更新</button> <button id="noticeClear">消す</button></div>`;
+  }
+  box.innerHTML = h;
+  const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+  on("pubLogin", async () => {
+    const email = $("pubEmail").value.trim(), pass = $("pubPass").value;
+    const msg = t => { $("pubMsg").textContent = t; };
+    if (!email || !pass) { msg("メールアドレスとパスワードを入れてください。"); return; }
+    $("pubLogin").disabled = true; msg("ログインしています…");
+    try { await signIn(email, pass); try { localStorage.setItem(PUBON_KEY, "1"); } catch {} toast("ログインしました"); renderPubBox(); publishNow(); }
+    catch (e) { msg("ログインできませんでした：" + (e.message === "Failed to fetch" ? "ネットにつながっていません" : e.message)); $("pubLogin").disabled = false; }
+  });
+  on("pubNow", () => publishNow());
+  on("pubView", () => { const u = new URL(location.href); u.search = "?view"; window.open(u.href, "_blank"); });
+  on("pubClear", clearPublic);
+  on("pubLogout", () => { if (!confirm("ログアウトしますか？（送信は止まります）")) return; try { localStorage.removeItem(AUTH_KEY); localStorage.setItem(PUBON_KEY, "0"); } catch {} idToken = null; setPubStatus("ログアウトしました"); renderPubBox(); });
+  const chk = $("pubOnChk"); if (chk) chk.onchange = () => { try { localStorage.setItem(PUBON_KEY, chk.checked ? "1" : "0"); } catch {} if (chk.checked) publishNow(); else setPubStatus("公開を止めています"); };
+  on("noticeSave", () => { snapshot("お知らせの更新"); state.notice = { text: $("noticeText").value.trim(), level: $("noticeWarn").checked ? "warn" : "normal", at: new Date().toISOString() }; persist(); toast(state.notice.text ? "お知らせを更新しました" : "お知らせを消しました"); });
+  on("noticeClear", () => { snapshot("お知らせを消す"); state.notice = { text: "", level: "normal", at: new Date().toISOString() }; persist(); renderPubBox(); toast("お知らせを消しました"); });
+}
+
+// ---- 速報ページ（見るだけ）----
+let viewTab = (() => { try { return localStorage.getItem(KEY + "_vtab"); } catch { return null; } })() || "scheduleSheet";
+function noticeHTML(n) {
+  if (!n || !n.text) return "";
+  const at = n.at ? new Date(n.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) : "";
+  return `<div class="notice${n.level === "warn" ? " warn" : ""}">${esc(n.text)}${at ? `<span class="at">${at} 更新</span>` : ""}</div>`;
+}
+// 横に広い表を、画面の幅に収まるよう縮小する（細かいところは2本指で拡大して見る）
+function fitView() {
+  if (!VIEW) return;
+  document.querySelectorAll("#scheduleRoot table.sched, #leagueRoot table.league, #tournamentRoot .bracket, #tournamentRoot table.seedtable").forEach(el => {
+    el.style.zoom = "";
+    const par = el.closest(".league-wrap, .bracket-scroll, .panel, section") || el.parentElement;
+    const avail = par.clientWidth - 4, need = el.scrollWidth || el.offsetWidth;
+    if (need > avail && avail > 0) el.style.zoom = String(Math.floor(avail / need * 1000) / 1000);
+  });
+}
+function applyViewTab() {
+  for (const id of ["scheduleSheet", "leagueSheet", "tournamentSheet"]) $(id).classList.toggle("off", id !== viewTab);
+  document.querySelectorAll(".vtab").forEach(b => b.classList.toggle("on", b.dataset.vtab === viewTab));
+  fitView();
+}
+async function viewerLoad() {
+  const upd = $("vupd");
+  try {
+    if (!DB_URL) throw new Error("速報ページの設定（publish.databaseURL）がありません");
+    const r = await fetch(pubPath() + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error(`読み込めません（${r.status}）`);
+    const j = await r.json();
+    if (!j) { upd.textContent = "まだ結果が公開されていません"; return; }
+    const s = migrate({ ...blankState(), ...(j.data || {}), app: "taikai-template", updatedAt: j.updatedAt || j.publishedAt });
+    if (s) { state = s; sigMismatch = j.sig !== configSignature(); }
+    upd.innerHTML = `最終更新 ${new Date(j.publishedAt || j.updatedAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}　${PUB.refreshSeconds || 20}秒ごとに自動更新`;
+    $("noticeView").innerHTML = noticeHTML(state.notice);
+    renderAll(); applyViewTab();
+  } catch (e) { upd.innerHTML = `<span class="err">${esc(e.message === "Failed to fetch" ? "通信できません。電波の良い場所で再読み込みしてください" : e.message)}</span>`; }
+}
+function startViewer() {
+  document.body.classList.add("view");
+  $("viewBar").classList.remove("hidden");
+  document.querySelector("#scheduleSheet .sheet-title").textContent = "進行表・試合結果";
+  document.title = `${CONFIG.title} 結果速報`;
+  $("subtitle").textContent = `${CONFIG.date}｜${CONFIG.venue}`;
+  document.querySelectorAll(".vtab").forEach(b => b.onclick = () => { viewTab = b.dataset.vtab; try { localStorage.setItem(KEY + "_vtab", viewTab); } catch {} applyViewTab(); });
+  window.addEventListener("resize", () => { clearTimeout(fitView._t); fitView._t = setTimeout(fitView, 200); });
+  renderAll(); applyViewTab();
+  viewerLoad();
+  setInterval(viewerLoad, Math.max(5, PUB.refreshSeconds || 20) * 1000);
+}
+
+// ============================ 起動 ============================
+document.addEventListener("click", e => { const td = e.target.closest?.("td[data-tidx]"); if (td) editTime(+td.dataset.tidx); });
+$("title").textContent = CONFIG.title;
+$("subtitle").textContent = `${CONFIG.date}｜${CONFIG.venue}｜${VERSION}`;
+document.title = `${CONFIG.title} 集計 ${VERSION}`;
+if (VIEW) { state = blankState(); startViewer(); } else {
+$("undoBtn").onclick = undo;
+$("exportBtn").onclick = exportBackup; $("exportBtn2").onclick = exportBackup;
+$("importFile").onchange = e => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value = ""; };
+$("deleteAll").onclick = deleteAll;
+$("nextBtn").onclick = () => { const r = $("nextRow"); if (r) { r.scrollIntoView({ block: "center" }); const i = [...r.querySelectorAll("input.sc")].find(x => x.value === "") || r.querySelector("input.sc"); i?.focus({ preventScroll: true }); } else $("tournamentSheet").scrollIntoView(); };
+window.addEventListener("beforeunload", e => { if (Object.keys(drafts).length) { e.preventDefault(); e.returnValue = ""; } });
+try { const bc = new BroadcastChannel(KEY); bc.onmessage = m => { if (m.data === "hello") bc.postMessage("here"); else if (m.data === "here") { const w = $("warnBar"); w.textContent = "⚠ このアプリが別のタブでも開かれています。入力は1つのタブだけで行い、他は閉じてください。"; w.classList.remove("hidden"); } }; bc.postMessage("hello"); } catch {}
+
+const cfgErr = validateConfig();
+if (LEAGUE_PLAN.triple > 0) cfgErr.push(`この設定では、3回以上続けて試合をするチームが出ます（延べ${LEAGUE_PLAN.triple}回）。チーム数に対してコートが多すぎる可能性があります。コートを減らすか、休憩を入れることを検討してください。`);
+if (cfgErr.length) $("configErrors").innerHTML = `<div class="errbox">設定（CONFIG）に問題があります：\n・${cfgErr.map(esc).join("\n・")}</div>`;
+renderAll(); showLastExport(); renderPubBox();
+setStatus(bootFromLocal ? "保存データを読み込みました" : "新規（保存データなし）");
+recoverIDB();
+if (PUB.enabled && authInfo() && pubOn()) { setPubStatus("公開：準備中"); publishNow(); }
+} // 運営画面の起動ここまで
+</script>
+</body>
+</html>
