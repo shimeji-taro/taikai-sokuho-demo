@@ -108,6 +108,9 @@ input.vsc{width:34px;height:24px;font-size:14px;font-weight:900;text-align:cente
 .vtab{flex:1;padding:8px 4px;font-size:14px}
 .vtab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .vupd{font-size:12px;color:var(--muted);margin-top:4px}
+.vfoot{font-size:11px;color:var(--muted);margin:16px 4px 24px}
+.viewcount{font-size:13px;margin:6px 0}
+.viewcount b{font-size:16px}
 .vupd .err{color:var(--danger);font-weight:700}
 body.view .sched td.time{cursor:default}
 body.view .toolbar,body.view .footer,body.view .hint{display:none!important}
@@ -176,6 +179,7 @@ body.view section.sheet.off{display:none}
       </div>
     </details>
   </footer>
+  <div id="viewFoot" class="vfoot hidden">見た人の数を数えるため、この端末の番号（でたらめな英数字。名前などは含みません）を送っています。</div>
 </div>
 <div id="toast" class="toast"></div>
 
@@ -187,7 +191,7 @@ body.view section.sheet.off{display:none}
 //     それより下の「仕組み」の部分は、書き換えなくても動くように作っています。
 // =====================================================================
 
-const VERSION = "v0.5.4";
+const VERSION = "v0.6.0";
 
 // ---------------------------------------------------------------------
 //  CONFIG（大会の設定）ここから
@@ -1146,9 +1150,12 @@ async function publishNow() {
   }
 }
 async function clearPublic() {
-  if (!confirm("速報ページのデータを消しますか？\n（このパソコンの集計データは消えません。速報ページには何も表示されなくなります）")) return;
+  const vc = COUNT_VIEWS && viewCount && !viewCount.err ? `\n閲覧数の記録（これまでに開いた端末 ${viewCount.total}台）も消えます。必要なら先にメモしてください。` : "";
+  if (!confirm("速報ページのデータを消しますか？\n（このパソコンの集計データは消えません。速報ページには何も表示されなくなります）" + vc)) return;
   try { localStorage.setItem(PUBON_KEY, "0"); } catch {}
-  try { const t = await getToken(); const r = await fetch(pubPath() + "?auth=" + encodeURIComponent(t), { method: "DELETE" }); if (!r.ok) throw new Error(`消せませんでした（${r.status}）`); setPubStatus("公開データを消しました"); toast("速報ページのデータを消しました"); }
+  try { const t = await getToken(); const r = await fetch(pubPath() + "?auth=" + encodeURIComponent(t), { method: "DELETE" }); if (!r.ok) throw new Error(`消せませんでした（${r.status}）`);
+    if (COUNT_VIEWS) { await fetch(viewsPath() + "?auth=" + encodeURIComponent(t), { method: "DELETE" }).catch(() => {}); viewCount = null; try { localStorage.removeItem(VPEAK_KEY); } catch {} }
+    setPubStatus("公開データを消しました"); toast("速報ページのデータを消しました"); }
   catch (e) { setPubStatus(e.message, true); }
   renderPubBox();
 }
@@ -1161,26 +1168,82 @@ function renderPubBox() {
     h += `<div class="row"><input type="email" id="pubEmail" placeholder="運営者のメールアドレス" autocomplete="username"> <input type="password" id="pubPass" placeholder="パスワード" autocomplete="current-password"> <button id="pubLogin" class="primary">ログイン</button></div><div id="pubMsg" style="color:var(--danger);font-weight:700;font-size:13px"></div>`;
   } else {
     h += `<div class="row">ログイン中：${esc(a.email || "")}　<label><input type="checkbox" id="pubOnChk" ${pubOn() ? "checked" : ""}> 公開する</label> <button id="pubNow">今すぐ送信</button> <button id="pubView">速報ページを開く</button> <button id="pubClear" class="danger">公開データを消す</button> <button id="pubLogout">ログアウト</button></div>
+      ${COUNT_VIEWS ? `<div class="viewcount" id="viewCount"></div>` : ""}
       <div class="row" style="display:block"><div>速報ページのお知らせ（空欄なら表示しません）</div><textarea id="noticeText" maxlength="300" placeholder="例：進行が10分遅れています／昼食は12:10〜">${esc(n.text || "")}</textarea>
       <label><input type="checkbox" id="noticeWarn" ${n.level === "warn" ? "checked" : ""}> 注意（赤で表示）</label> <button id="noticeSave" class="primary">お知らせを更新</button> <button id="noticeClear">消す</button></div>`;
   }
   box.innerHTML = h;
+  if (a && COUNT_VIEWS) { showViewCount(); if (!viewCount) loadViewCount(); }
   const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
   on("pubLogin", async () => {
     const email = $("pubEmail").value.trim(), pass = $("pubPass").value;
     const msg = t => { $("pubMsg").textContent = t; };
     if (!email || !pass) { msg("メールアドレスとパスワードを入れてください。"); return; }
     $("pubLogin").disabled = true; msg("ログインしています…");
-    try { await signIn(email, pass); try { localStorage.setItem(PUBON_KEY, "1"); } catch {} toast("ログインしました"); renderPubBox(); publishNow(); }
+    try { await signIn(email, pass); try { localStorage.setItem(PUBON_KEY, "1"); } catch {} toast("ログインしました"); renderPubBox(); publishNow(); loadViewCount(); }
     catch (e) { msg("ログインできませんでした：" + (e.message === "Failed to fetch" ? "ネットにつながっていません" : e.message)); $("pubLogin").disabled = false; }
   });
   on("pubNow", () => publishNow());
   on("pubView", () => { const u = new URL(location.href); u.search = "?view"; window.open(u.href, "_blank"); });
   on("pubClear", clearPublic);
-  on("pubLogout", () => { if (!confirm("ログアウトしますか？（送信は止まります）")) return; try { localStorage.removeItem(AUTH_KEY); localStorage.setItem(PUBON_KEY, "0"); } catch {} idToken = null; setPubStatus("ログアウトしました"); renderPubBox(); });
+  on("pubLogout", () => { if (!confirm("ログアウトしますか？（送信は止まります）")) return; try { localStorage.removeItem(AUTH_KEY); localStorage.setItem(PUBON_KEY, "0"); } catch {} idToken = null; clearTimeout(viewTimer); viewCount = null; setPubStatus("ログアウトしました"); renderPubBox(); });
   const chk = $("pubOnChk"); if (chk) chk.onchange = () => { try { localStorage.setItem(PUBON_KEY, chk.checked ? "1" : "0"); } catch {} if (chk.checked) publishNow(); else setPubStatus("公開を止めています"); };
   on("noticeSave", () => { snapshot("お知らせの更新"); state.notice = { text: $("noticeText").value.trim(), level: $("noticeWarn").checked ? "warn" : "normal", at: new Date().toISOString() }; persist(); toast(state.notice.text ? "お知らせを更新しました" : "お知らせを消しました"); });
   on("noticeClear", () => { snapshot("お知らせを消す"); state.notice = { text: "", level: "normal", at: new Date().toISOString() }; persist(); renderPubBox(); toast("お知らせを消しました"); });
+}
+
+// ---- 閲覧数（何人が見たか）----
+// 速報ページを開いた端末が、自分の番号（でたらめな英数字）に「いま見ている」時刻を1分ごとに書く。
+// 運営画面では「直近3分に時刻を書いた端末＝いま見ている人」「書いたことのある端末＝合計」として数える。
+// 同じスマホでもブラウザを変えたり、閲覧履歴を残さないモードで開いたりすると、別の端末として数える
+const COUNT_VIEWS = PUB.countViews !== false;
+const viewsPath = vid => `${DB_URL}/views/${encodeURIComponent(CONFIG.id)}${vid ? "/" + vid : ""}.json`;
+const VPEAK_KEY = KEY + "_vpeak";
+let viewerId = null, lastPing = 0, viewTimer = null, viewCount = null;
+function myViewerId() {
+  if (viewerId) return viewerId;
+  try { viewerId = localStorage.getItem(KEY + "_vid"); } catch {}
+  if (!/^[a-z0-9]{12,24}$/.test(viewerId || "")) {
+    const a = new Uint8Array(16); crypto.getRandomValues(a);
+    viewerId = [...a].map(x => "abcdefghijklmnopqrstuvwxyz0123456789"[x % 36]).join("");
+    try { localStorage.setItem(KEY + "_vid", viewerId); } catch {}
+  }
+  return viewerId;
+}
+async function pingView() {
+  if (!COUNT_VIEWS || !DB_URL || Date.now() - lastPing < 55000) return;
+  lastPing = Date.now();
+  try { await fetch(viewsPath(myViewerId()), { method: "PUT", body: JSON.stringify({ ".sv": "timestamp" }) }); } catch {}   // 数えられなくても速報ページは普通に動く
+}
+async function loadViewCount() {
+  clearTimeout(viewTimer);
+  if (VIEW || !PUB.enabled || !COUNT_VIEWS || !authInfo()) return;
+  try {
+    const t = await getToken();
+    const r = await fetch(viewsPath() + "?auth=" + encodeURIComponent(t), { cache: "no-store" });
+    if (r.status === 401 || r.status === 403) throw new Error("rule");
+    if (!r.ok) throw new Error(String(r.status));
+    const j = (await r.json()) || {};
+    const times = Object.values(j).filter(v => typeof v === "number"), now = Date.now();
+    const cur = times.filter(v => now - v < 3 * 60000).length;
+    let peak = parse(lsGet(VPEAK_KEY)) || { n: 0, at: null };
+    if (cur > (peak.n || 0)) { peak = { n: cur, at: new Date().toISOString() }; try { localStorage.setItem(VPEAK_KEY, JSON.stringify(peak)); } catch {} }
+    viewCount = { cur, total: times.length, peak, at: new Date() };
+  } catch (e) {
+    viewCount = { err: e.message === "rule" ? "閲覧数を読めません。データベースのルールに views を追加してください（記事の手順）" : "閲覧数を読めません（" + (e.message === "Failed to fetch" ? "ネットにつながっていません" : e.message) + "）" };
+  }
+  showViewCount();
+  viewTimer = setTimeout(loadViewCount, 60000);
+}
+function showViewCount() {
+  const el = $("viewCount"); if (!el) return;
+  const v = viewCount;
+  if (!v) { el.textContent = "閲覧数：読み込み中…"; return; }
+  if (v.err) { el.innerHTML = `<span style="color:var(--danger)">${esc(v.err)}</span>`; return; }
+  const hm = d => new Date(d).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  el.innerHTML = `閲覧数　いま見ている人 <b>${v.cur}</b>人（直近3分）／これまでに開いた端末 <b>${v.total}</b>台` +
+    (v.peak?.n ? `／いちばん多かったとき <b>${v.peak.n}</b>人（${hm(v.peak.at)}）` : "") + `　<span class="progress">${hm(v.at)} 時点</span> <button id="viewCountNow">更新</button>`;
+  const b = $("viewCountNow"); if (b) b.onclick = loadViewCount;
 }
 
 // ---- 速報ページ（見るだけ）----
@@ -1248,11 +1311,13 @@ async function viewerLoad() {
     upd.innerHTML = `最終更新 ${new Date(j.publishedAt || j.updatedAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}　${PUB.refreshSeconds || 20}秒ごとに自動更新`;
     $("noticeView").innerHTML = noticeHTML(state.notice);
     renderAll(); applyViewTab();
+    pingView();
   } catch (e) { upd.innerHTML = `<span class="err">${esc(e.message === "Failed to fetch" ? "通信できません。電波の良い場所で再読み込みしてください" : e.message)}</span>`; }
 }
 function startViewer() {
   document.body.classList.add("view");
   $("viewBar").classList.remove("hidden");
+  if (COUNT_VIEWS) $("viewFoot").classList.remove("hidden");
   document.querySelector("#scheduleSheet .sheet-title").textContent = "進行表・試合結果";
   document.title = `${CONFIG.title} 結果速報`;
   $("subtitle").textContent = `${CONFIG.date}｜${CONFIG.venue}`;
