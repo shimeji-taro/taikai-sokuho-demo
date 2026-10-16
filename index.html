@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.25, maximum-scale=5, user-scalable=yes">
 <title>大会集計テンプレート</title>
 <style>
 :root{--line:#333;--muted:#666;--bg:#eef1f5;--card:#fff;--accent:#1f5f8b;--win:#c62828;--next:#fff6c2;--warn:#fff3e0;--warnline:#ef6c00;--danger:#c62828;--hold:#ffe0b2}
@@ -102,6 +102,9 @@ input.vsc{width:34px;height:24px;font-size:14px;font-weight:900;text-align:cente
 .notice .at{display:block;font-size:11px;font-weight:400;color:var(--muted)}
 .ro{display:inline-block;min-width:26px;font-size:18px;font-weight:900}
 .vtabs{display:flex;gap:6px;margin-top:8px}
+.vzoom{display:flex;gap:4px;align-items:center;margin-top:6px;font-size:12px;color:var(--muted)}
+.vzoom button{padding:4px 10px;font-size:13px}
+.vzoom .pct{min-width:44px;text-align:center;font-weight:700;color:#333}
 .vtab{flex:1;padding:8px 4px;font-size:14px}
 .vtab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .vupd{font-size:12px;color:var(--muted);margin-top:4px}
@@ -130,7 +133,8 @@ body.view section.sheet.off{display:none}
     <div class="sub" id="subtitle"></div>
     <div id="warnBar" class="warnbar hidden"></div>
     <div id="viewBar" class="hidden"><div class="vupd" id="vupd"></div><div id="noticeView"></div>
-      <div class="vtabs"><button class="vtab" data-vtab="scheduleSheet">進行表</button><button class="vtab" data-vtab="leagueSheet">リーグ表</button><button class="vtab" data-vtab="tournamentSheet">トーナメント</button></div></div>
+      <div class="vtabs"><button class="vtab" data-vtab="scheduleSheet">進行表</button><button class="vtab" data-vtab="leagueSheet">リーグ表</button><button class="vtab" data-vtab="tournamentSheet">トーナメント</button></div>
+      <div class="vzoom">表示の大きさ <button data-vz="minus" aria-label="縮小">－</button><span class="pct" id="vzPct"></span><button data-vz="plus" aria-label="拡大">＋</button><button data-vz="fit">全体</button><button data-vz="one">等倍</button></div></div>
     <div class="toolbar">
       <span id="saveStatus" class="status">自動保存：準備中</span>
       <span id="progress" class="progress"></span>
@@ -183,7 +187,7 @@ body.view section.sheet.off{display:none}
 //     それより下の「仕組み」の部分は、書き換えなくても動くように作っています。
 // =====================================================================
 
-const VERSION = "v0.5.1";
+const VERSION = "v0.5.4";
 
 // ---------------------------------------------------------------------
 //  CONFIG（大会の設定）ここから
@@ -1186,15 +1190,45 @@ function noticeHTML(n) {
   const at = n.at ? new Date(n.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) : "";
   return `<div class="notice${n.level === "warn" ? " warn" : ""}">${esc(n.text)}${at ? `<span class="at">${at} 更新</span>` : ""}</div>`;
 }
-// 横に広い表を、画面の幅に収まるよう縮小する（細かいところは2本指で拡大して見る）
+// 表示の大きさ（タブごと）。"fit"＝画面の幅に収める、数字＝倍率。ボタンで変えられ、次に開いたときも同じ倍率になる
+// 指での拡大・縮小（ピンチ）も使える
+let viewZoom = (() => { try { return JSON.parse(localStorage.getItem(KEY + "_vzoom")) || null; } catch { return null; } })() || { scheduleSheet: 1, leagueSheet: "fit", tournamentSheet: "fit" };
+let lastZoom = 1;
+function zoomTargets(tab) {
+  if (tab === "scheduleSheet") return [...document.querySelectorAll("#scheduleRoot .court")];
+  if (tab === "leagueSheet") return [...document.querySelectorAll("#leagueRoot table.league")];
+  return [...document.querySelectorAll("#tournamentRoot .bracket, #tournamentRoot table.seedtable")];
+}
 function fitView() {
   if (!VIEW) return;
-  document.querySelectorAll("#leagueRoot table.league, #tournamentRoot .bracket, #tournamentRoot table.seedtable").forEach(el => {
-    el.style.zoom = "";
-    const par = el.closest(".league-wrap, .bracket-scroll, .panel, section") || el.parentElement;
-    const avail = par.clientWidth - 4, need = el.scrollWidth || el.offsetWidth;
-    if (need > avail && avail > 0) el.style.zoom = String(Math.floor(avail / need * 1000) / 1000);
-  });
+  const tab = viewTab, mode = viewZoom[tab] ?? "fit", els = zoomTargets(tab);
+  els.forEach(el => el.style.zoom = "");
+  let z = 1;
+  if (mode === "fit") {
+    if (tab === "scheduleSheet") {      // 全コートの表をまとめて画面の幅に収める
+      const box = document.querySelector("#scheduleRoot .courts");
+      if (box) { const gap = (parseFloat(getComputedStyle(box).columnGap) || 0) * Math.max(0, els.length - 1), need = box.scrollWidth - gap, avail = box.clientWidth - 2 - gap; z = need > avail && avail > 0 ? avail / need : 1; }   // 表どうしのすき間は縮小されないので差し引く
+      z = Math.min(1, z * 0.97);           // 枠線などの分、少し余裕を持たせる
+      els.forEach(el => el.style.zoom = String(Math.floor(z * 1000) / 1000));
+    } else {                            // 表ごとに画面の幅に収める
+      els.forEach(el => {
+        const par = el.closest(".league-wrap, .bracket-scroll, .panel, section") || el.parentElement;
+        const avail = par.clientWidth - 4, need = el.scrollWidth || el.offsetWidth, zz = need > avail && avail > 0 ? avail / need : 1;
+        el.style.zoom = String(Math.floor(zz * 1000) / 1000); z = Math.min(z, zz);
+      });
+    }
+  } else { z = +mode || 1; els.forEach(el => el.style.zoom = String(z)); }
+  lastZoom = z;
+  const pct = $("vzPct"); if (pct) pct.textContent = mode === "fit" ? `全体（${Math.round(z * 100)}%）` : `${Math.round(z * 100)}%`;
+}
+function setZoom(cmd) {
+  let z = viewZoom[viewTab] === "fit" ? lastZoom : (+viewZoom[viewTab] || 1);
+  if (cmd === "minus") z = Math.max(0.25, Math.round(z * 0.8 * 100) / 100);
+  else if (cmd === "plus") z = Math.min(3, Math.round(z * 1.25 * 100) / 100);
+  else if (cmd === "one") z = 1;
+  viewZoom[viewTab] = cmd === "fit" ? "fit" : z;
+  try { localStorage.setItem(KEY + "_vzoom", JSON.stringify(viewZoom)); } catch {}
+  fitView();
 }
 function applyViewTab() {
   for (const id of ["scheduleSheet", "leagueSheet", "tournamentSheet"]) $(id).classList.toggle("off", id !== viewTab);
@@ -1223,6 +1257,7 @@ function startViewer() {
   document.title = `${CONFIG.title} 結果速報`;
   $("subtitle").textContent = `${CONFIG.date}｜${CONFIG.venue}`;
   document.querySelectorAll(".vtab").forEach(b => b.onclick = () => { viewTab = b.dataset.vtab; try { localStorage.setItem(KEY + "_vtab", viewTab); } catch {} applyViewTab(); });
+  document.querySelectorAll("[data-vz]").forEach(b => b.onclick = () => setZoom(b.dataset.vz));
   window.addEventListener("resize", () => { clearTimeout(fitView._t); fitView._t = setTimeout(fitView, 200); });
   renderAll(); applyViewTab();
   viewerLoad();
